@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="pt-BR" class="escuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W Lanches</title>
+<meta name="description" content="W Lanches: aqui você pede pelo número. Monte seu pedido e envie pelo WhatsApp.">
+<link rel="icon" href="img/icone.png">
+<link rel="apple-touch-icon" href="img/icone.png">
+<meta name="theme-color" content="#14120f">
+<!-- Prévia do link no WhatsApp. ponytail: endereço absoluto; se o endereço do site mudar, troque aqui também -->
+<meta property="og:title" content="W Lanches – Aqui você pede pelo número">
+<meta property="og:description" content="Lanches, combos e petiscos em Belford Roxo. Monte seu pedido e envie pelo WhatsApp.">
+<meta property="og:image" content="https://wlanches.wlanches-rj.workers.dev/img/logo-w.jpg">
+<meta property="og:url" content="https://wlanches.wlanches-rj.workers.dev/">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  /* Paleta da marca: amarelo = ação, vermelho do "W" = destaque/alerta.
+     Tema claro é o padrão; para voltar ao escuro, troque <html lang="pt-BR"> por <html lang="pt-BR" class="escuro"> */
+  :root {
+    color-scheme: light;
+    --amarelo: #ffc928; --amarelo-forte: #f2b200; --preto: #14120f;
+    --fundo: #ffffff; --superficie: #ffffff; --superficie-2: #f6f3ec; --linha: #ebe5d9;
+    --texto: #1a1815; --texto-suave: #6b655b;
+    --destaque: #c62a20; --vermelho: #e63329; --vermelho-texto: #c62a20; --verde: #1f8a4c;
+    --sel: rgba(255,201,40,.2); --rodape: rgba(255,255,255,.96); --sombra: 0 2px 10px rgba(26,24,21,.06);
+    --raio: 14px;
+  }
+  :root.escuro {
+    color-scheme: dark;
+    --fundo: #0f0e0c; --superficie: #1a1815; --superficie-2: #24211d; --linha: #2f2b26;
+    --texto: #f6f1e7; --texto-suave: #a9a296;
+    --destaque: var(--amarelo); --vermelho-texto: #ff7a6e; --verde: #3ccf7a;
+    --sel: rgba(255,201,40,.08); --rodape: rgba(26,24,21,.96); --sombra: none;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: system-ui, sans-serif; background: var(--fundo); color: var(--texto); line-height: 1.45; }
+  .app { max-width: 720px; margin: 0 auto; min-height: 100vh; padding-bottom: 88px; }
+  h1, h2, .btn, .num { font-family: "Bebas Neue", Impact, sans-serif; letter-spacing: .6px; font-weight: 400; }
+  a { color: var(--destaque); }
+  :focus-visible { outline: 2px solid var(--amarelo); outline-offset: 2px; }
+
+  .barra { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--preto); position: sticky; top: 0; z-index: 2; }
+  .barra h1 { font-size: 1.7rem; color: var(--amarelo); flex: 1; }
+  .voltar { background: #2a2722; border: 0; color: #fff; font-size: 1.4rem; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
+
+  .status { margin: 12px 16px 0; padding: 10px 14px; border-radius: 10px; font-weight: 700; font-size: .92rem; display: flex; align-items: center; gap: 8px; }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .status.aberto { background: rgba(60,207,122,.12); color: var(--verde); }
+  .status.fechado { background: rgba(230,51,41,.14); color: var(--vermelho-texto); }
+  .linha-info { display: flex; justify-content: space-between; gap: 8px; padding: 10px 16px; font-size: .88rem; color: var(--texto-suave); }
+
+  .topo { text-align: center; padding: 20px 16px 24px; background: radial-gradient(circle at 50% 35%, rgba(255,201,40,.16), transparent 65%), url(img/simbolos.svg) 0 0 / 210px 210px, var(--preto); }
+  .topo img { max-width: 190px; width: 50%; height: auto; border-radius: var(--raio); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .junto { white-space: nowrap; }
+  .quebra { display: none; }
+  @media (max-width: 600px) { .quebra { display: inline; } .app .topo h2 { font-size: 1.35rem; } }
+  .fita { height: 1em; width: auto; vertical-align: -0.12em; margin: 0 6px; }
+  .topo h2 { color: #fff; font-size: 1.55rem; margin-top: 12px; text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+
+  .busca { display: block; width: calc(100% - 32px); margin: 0 16px 8px; padding: 13px 16px; border-radius: 999px; border: 1px solid var(--linha); background: var(--superficie); color: var(--texto); font-size: 1rem; }
+  .categoria { color: var(--texto); font-size: 1.9rem; margin: 24px 16px 10px; padding-left: 12px; border-left: 4px solid var(--vermelho); line-height: 1; }
+
+  .produto { display: flex; gap: 14px; margin: 0 16px 10px; padding: 14px; background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); box-shadow: var(--sombra); cursor: pointer; text-decoration: none; color: inherit; transition: border-color .15s, transform .15s; }
+  .produto:hover, .produto:focus-visible { border-color: var(--amarelo-forte); transform: translateY(-1px); }
+  .produto .txt { flex: 1; }
+  .produto b { display: block; font-weight: 650; }
+  .produto small { color: var(--texto-suave); }
+  .de { color: var(--texto-suave); font-weight: 400; margin-right: 4px; }
+  .preco { color: var(--destaque); font-weight: 800; margin-top: 6px; }
+  .produto img { width: 96px; height: 76px; object-fit: contain; background: var(--preto); border-radius: 10px; flex-shrink: 0; }
+  .num { display: inline-block; background: var(--amarelo); color: var(--preto); padding: 0 7px; border-radius: 6px; margin-right: 6px; font-size: 1.15rem; line-height: 1.4; }
+
+  .detalhe img { width: 100%; height: 240px; object-fit: contain; background: var(--preto); }
+  .bloco { padding: 16px; }
+  .bloco h2 { font-size: 1.7rem; }
+  .bloco p { color: var(--texto-suave); }
+  .titulo-sec { background: var(--superficie-2); padding: 10px 16px; font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--texto-suave); display: flex; justify-content: space-between; align-items: center; }
+  .titulo-sec small { background: var(--amarelo); color: var(--preto); padding: 2px 8px; border-radius: 999px; font-size: .7rem; }
+  .opcao { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--linha); cursor: pointer; transition: background .15s; }
+  .opcao:has(input:checked) { background: var(--sel); }
+  .opcao input { width: 20px; height: 20px; accent-color: var(--amarelo); vertical-align: middle; margin-left: 6px; }
+  textarea, input[type=text], input[type=tel], select { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--linha); background: var(--superficie); color: var(--texto); font: inherit; }
+  textarea:focus, input:focus, select:focus { border-color: var(--amarelo-forte); outline: none; }
+  label.campo { display: block; margin: 14px 0 6px; font-weight: 600; font-size: .92rem; }
+
+  .rodape { position: fixed; bottom: 0; left: 0; right: 0; background: var(--rodape); backdrop-filter: blur(8px); border-top: 1px solid var(--linha); z-index: 3; }
+  .rodape .dentro { max-width: 720px; margin: 0 auto; display: flex; gap: 12px; padding: 12px 16px; align-items: center; }
+  .qtd { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+  .qtd button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--superficie-2); color: var(--destaque); font-size: 1.3rem; cursor: pointer; }
+  .qtd button:hover { background: var(--linha); }
+  .btn { flex: 1; display: block; text-align: center; background: var(--amarelo); color: var(--preto); border: 0; padding: 13px 18px; border-radius: 12px; font-size: 1.45rem; cursor: pointer; text-decoration: none; box-shadow: 0 6px 18px rgba(255,201,40,.22); transition: background .15s; }
+  .btn:hover { background: var(--amarelo-forte); }
+  .btn:disabled { background: var(--superficie-2); color: var(--texto-suave); box-shadow: none; cursor: not-allowed; }
+
+  .nav { justify-content: space-around; padding-top: 8px !important; padding-bottom: 8px !important; }
+  .nav a { color: var(--texto-suave); text-decoration: none; text-align: center; font-size: .78rem; flex: 1; padding: 4px 0; border-radius: 10px; }
+  .nav a.ativo { color: var(--texto); font-weight: 700; background: var(--sel); }
+  .nav .contador { background: var(--vermelho); color: #fff; border-radius: 999px; padding: 0 7px; font-size: .72rem; margin-left: 4px; font-weight: 700; }
+
+  .item-sacola { display: flex; gap: 12px; justify-content: space-between; align-items: center; margin: 10px 16px; padding: 14px; background: var(--superficie); border: 1px solid var(--linha); border-radius: var(--raio); box-shadow: var(--sombra); }
+  .dica { color: var(--texto-suave); font-size: .85rem; font-weight: 400; }
+  .btn-sec { display: block; width: 100%; margin-top: 10px; padding: 12px; border-radius: 10px; border: 1px solid var(--amarelo); background: none; color: var(--amarelo); font: inherit; font-weight: 700; cursor: pointer; }
+  #infoTaxa { margin-top: 8px; }
+  .remover { background: none; border: 0; color: var(--vermelho-texto); font: inherit; font-size: .88rem; font-weight: 700; padding: 6px 0 0; cursor: pointer; }
+  .item-sacola small { color: var(--texto-suave); display: block; }
+  .totais { margin: 0 16px; padding: 14px; background: var(--superficie-2); border-radius: var(--raio); }
+  .totais div { display: flex; justify-content: space-between; padding: 3px 0; color: var(--texto-suave); }
+  .totais .total { font-weight: 800; font-size: 1.2rem; color: var(--destaque); border-top: 1px solid var(--linha); margin-top: 6px; padding-top: 8px; }
+  .vazio { text-align: center; padding: 48px 16px; color: var(--texto-suave); }
+  .lista-info div { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--linha); }
+  .lista-info .hoje { font-weight: 700; background: var(--sel); }
+  .aviso { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--texto); color: var(--fundo); padding: 10px 20px; border-radius: 999px; font-weight: 700; z-index: 4; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  img.escuro { background: var(--preto) !important; }
+  .produto img.foto { object-fit: cover; } /* fotos reais preenchem a miniatura */
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<nav class="rodape" id="nav"><div class="dentro nav">
+  <a href="#/" data-v="inicio">🏠<br>Início</a>
+  <a href="#/sacola" data-v="sacola">🛍️<br>Sacola<span class="contador" id="contador" hidden></span></a>
+  <a href="#/perfil" data-v="perfil">ℹ️<br>Perfil da loja</a>
+</div></nav>
+<div class="aviso" id="aviso" hidden role="status"></div>
+
+<script>
+// ===== Dados da loja: edite aqui =====
+const LOJA = {
+  nome: "W Lanches",
+  whatsapp: "5521992465470",           // 55 + DDD + número, só dígitos
+  endereco: "Av. Bob Kennedy, Lote 12, Quadra 16, Loja A – Nova Piam, Belford Roxo – RJ, 26115-560",
+  pedidoMinimo: 8,
+  telefone: "(21) 99246-5470",
+  instagram: "wlanches0",
+  taxaKm: 4,                           // entrega: R$ por km, arredondando o km para cima
+  lat: -22.7392161, lon: -43.393849,  // pino "Wlanches" no Google Maps
+  // Domingo até sábado. "" = fechado. Formato "HH:MM-HH:MM"
+  horarios: ["16:00-23:59", "", "", "14:00-22:00", "14:00-22:00", "14:00-23:59", "14:00-23:59"],
+  pagamentos: ["Pix", "Cartão", "Dinheiro"],
+};
+
+// [descrição, preço sanduíche, preço trio]. A foto é img/<número>.jpg
+const LANCHES = [
+  ["1 Carne - Molho - Alface", 8, 20],
+  ["1 Carne - Molho - Queijo e Alface", 9, 21],
+  ["1 Carne - Queijo - Bacon - Molho - Alface", 11, 23],
+  ["2 Carnes - Queijo - Molho - Alface", 15, 27],
+  ["Carne - Queijo - Molho - Bacon - Ovo - Alface", 17, 29],
+  ["3 Carnes - 3 Queijos - Molho e Alface", 18.5, 30.5],
+  ["2 Carnes - Queijo - Ovo - Bacon - Molho - Alface", 18, 30],
+  ["4 Carnes - 4 Queijos - Molho - Alface", 20, 32],
+  ["5 Carnes - 5 Queijos - Molho - Alface", 21, 33],
+  ["3 Carnes - 3 Queijos - Ovo - Bacon - Calabresa", 21, 33],
+  ["2 Carnes Picanha 120g - Queijo - Ovo - Bacon - Molho e Alface", 23, 35],
+  ["1 Empanado de Queijo - Presunto - Molho e Alface", 16, 28],
+  ["1 Empanado de Frango - Molho e Alface", 16, 28],
+  ["2 Carnes com Cheddar Cremoso", 15, 27],
+  ["2 Carnes - Queijo - Bacon - Molho e Alface", 16, 28],
+  ["1 Carne 120g - Queijo - Bacon - Molho e Anéis de Cebola Crocantes", 20, 32],
+];
+
+// [nome, descrição, preço, foto]
+const COMBOS = [
+  ["Combo P", "3 Lanches (Pão, 2 Carnes, Queijo Cheddar, Molho e Alface), Batata com Bacon e Cheddar", 63, "img/combo-p-foto.jpg"],
+  ["Combo M", "4 Lanches (Pão, 2 Carnes, Queijo Cheddar, Molho e Alface), Batata com Bacon e Cheddar e Nugget", 76, "img/combo-m-foto.jpg"],
+  ["Combo G", "5 Lanches (Pão, 2 Carnes, Queijo Cheddar, Molho e Alface), Batata com Bacon e Cheddar, Nugget e Anéis de Cebola", 86, "img/combo-g-foto.jpg"],
+];
+
+// [nome, descrição, preço, preço antigo ("de"), foto, mostra os molhos especiais grátis?]
+const PROMOCOES = [
+  ["W Peixe (X-Peixe)", "O hambúrguer de peixe crocante!", 20, 25, "img/promo-peixe-foto.jpg"],
+  ["X-Tudão Completo", "Pão com gergelim, carne, bacon, ovo, presunto, queijo, molho, alface, milho, ervilha, batata palha e queijo ralado", 9.99, null, "img/promo-xtudao-foto.jpg", true],
+];
+
+// [nome, preço, foto (opcional), descrição (opcional)]
+const PETISCOS = [
+  ["Gurjão de peixe com Fritas", 55, "img/petisco-1.jpg"],
+  ["Frango com osso empanado com Fritas", 50, "img/petisco-2.jpg"],
+  ["Frango com osso empanado", 60, "img/petisco-3.jpg"],
+  ["Batata W Lanches", 45, "img/petisco-4.jpg", "Batata frita, bacon, calabresa, frango frito, cheddar, molhos especiais, orégano, queijo ralado e alho torrado"],
+  ["Caixa de frango empanado com Fritas P", 17, "img/petisco-5.jpg"],
+  ["Caixa de frango empanado com Fritas G", 27, "img/petisco-6.jpg"],
+  ["Frango a passarinho com Fritas", 45, "img/petisco-7.jpg"],
+  ["Gurjão de frango com Fritas", 40, "img/petisco-8.jpg"],
+  ["Calabresa acebolada com Fritas", 38, "img/petisco-9.jpg"],
+  ["Petisco Família W Lanches", 80, "img/petisco-10.jpg", "Frango a passarinho, gurjão de frango, calabresa acebolada, batata frita com bacon e cheddar"],
+  ["Porção de sardinha frita", 25, "img/petisco-11.jpg"],
+  ["Batata com bacon e Cheddar M", 15, "img/petisco-12.jpg"],
+  ["Batata com bacon e Cheddar G", 30, "img/petisco-13.jpg"],
+  ["Batata Frita", 8, "img/petisco-14.jpg"],
+  ["Nugget 6 unidades", 8, "img/petisco-15.jpg"],
+  ["Cebola empanada 7 unidades", 8, "img/petisco-16.jpg"],
+];
+
+// [nome, preço]
+const ACAI = [
+  ["Açaí na Tigela 300 ml", 13, "img/acai-tigela.jpg"],
+  ["Açaí na Tigela 500 ml", 16, "img/acai-tigela.jpg"],
+  ["Açaí na Tigela 750 ml", 23, "img/acai-tigela.jpg"],
+  ["Açaí no Copo 200 ml", 5, "img/acai-copo-200.jpg"],
+  ["Açaí no Copo 300 ml", 8.99, "img/acai-copo-300.jpg"],
+  ["Açaí no Copo 400 ml", 12.99, "img/acai-copo-400.jpg"],
+  ["Açaí no Copo 500 ml", 14.99, "img/acai-copo-500.jpg"],
+  ["Açaí no Copo 700 ml", 19.99, "img/acai-copo-700.jpg"],
+];
+
+// Sabores de refri lata para o Trio
+// Açaí: acompanhamentos (marcar quantos quiser, sem custo) e calda (escolher uma)
+const ACOMPANHAMENTOS = ["Granola", "Amendoim", "Granulado", "Disquete", "Aveia", "Paçoca", "Jujuba", "Leite em pó", "Biscoitinho"];
+const CALDAS = ["Maracujá", "Chocolate", "Uva", "Morango", "Leite condensado", "Chocolate branco"];
+
+const REFRIS = ["Coca-Cola", "Coca-Cola Zero", "Fanta Uva", "Fanta Laranja", "Sprite", "Guaraná Antarctica"]; // vazio = não pergunta o sabor
+
+// Lanches: complementos e molhos especiais grátis (marcar quantos quiser)
+const COMPLEMENTOS = ["Milho", "Ervilha", "Queijo ralado", "Batata palha"];
+const MOLHOS = ["Maionese de bacon", "Molho tártaro", "Barbecue", "Molho verde"];
+
+// Adicionais que aparecem nos lanches: [nome, preço]
+const ADICIONAIS = [
+  ["Picanha", 7],
+  ["Hambúrguer", 5],
+  ["Cheddar", 3],
+  ["Bacon", 3],
+  ["Ovo", 3],
+  ["Picles", 3],
+];
+// =====================================
+
+// [nome, preço]; o sabor é escolhido na tela do produto
+const MILKSHAKES = [["Milk-shake 400 ml", 12], ["Milk-shake 500 ml", 15], ["Milk-shake 700 ml", 19]];
+const SABORES_MILKSHAKE = ["Morango", "Maracujá", "Uva", "Doce de leite", "Ovomaltine"];
+// [nome, preço, foto (opcional)]
+const SUCOS = [["Suco 400 ml", 13], ["Suco 500 ml", 15], ["Suco 700 ml", 18]];
+const VITAMINAS = [["Vitamina 400 ml", 13], ["Vitamina 500 ml", 15], ["Vitamina 700 ml", 18]];
+const SABORES_SUCO = ["Manga", "Morango", "Maracujá", "Abacaxi"]; // vale para suco e vitamina
+
+// [nome, preço, escolhas (null = nenhuma): [[título, opções]], foto]
+const BEBIDAS = [
+  ["Refrigerante lata", 6, [["Sabor", REFRIS]], "img/bebida-latas-hd.jpg"],
+  ["Guaraviton", 7, null, "img/bebida-guaraviton-hd.jpg"],
+  ["Guaravita", 2, null, "img/bebida-guaravita-hd.jpg"],
+  ["Coca-Cola 2 litros", 14, null, "img/bebida-coca-2l-hd.jpg"],
+  ["Fanta Uva 2 litros", 12, null, "img/bebida-fanta-uva-2l-hd.jpg"],
+  ["Fanta Laranja 2 litros", 12, null, "img/bebida-fanta-laranja-2l-hd.jpg"],
+  ["Guaraná Antarctica 2 litros", 12, null, "img/bebida-guarana-2l-hd.jpg"],
+];
+
+// Tudo numa lista só; o índice aqui é o id usado na sacola e em #/produto/<id>
+const ITENS = [
+  ...PROMOCOES.map(([titulo, desc, sand, de, img, molhos]) => ({ cat: "Promoções", titulo, desc, sand, de, img, molhos })),
+  ...COMBOS.map(([titulo, desc, sand, img]) => ({ cat: "Combos", titulo, desc, sand, img })),
+  ...LANCHES.map(([desc, sand, trio], i) => ({ cat: "Lanches", num: i + 1, titulo: `Nº ${i + 1}`, desc, sand, trio, img: `img/lanche-${i + 1}.jpg` })),
+  ...PETISCOS.map(([titulo, sand, img, desc = ""]) => ({ cat: "Petiscos", titulo, desc, sand, img })),
+  ...ACAI.map(([titulo, sand, img]) => ({ cat: "Açaí", titulo, desc: "", sand, img })),
+  ...MILKSHAKES.map(([titulo, sand]) => ({ cat: "Milk-shakes", titulo, desc: "", sand, escolhas: [["Sabor", SABORES_MILKSHAKE]] })),
+  ...SUCOS.map(([titulo, sand, img]) => ({ cat: "Sucos", titulo, desc: "", sand, img, escolhas: [["Sabor", SABORES_SUCO]] })),
+  ...VITAMINAS.map(([titulo, sand, img]) => ({ cat: "Vitaminas", titulo, desc: "", sand, img, escolhas: [["Sabor", SABORES_SUCO]] })),
+  ...BEBIDAS.map(([titulo, sand, escolhas, img]) => ({ cat: "Bebidas", titulo, desc: "", sand, escolhas: escolhas || undefined, img })),
+];
+const SEM_OBS = ["Milk-shakes", "Sucos", "Vitaminas", "Bebidas"]; // categorias sem campo de observações
+const CATEGORIAS = [...new Set(ITENS.map(i => i.cat))];
+
+const DIAS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const real = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const app = document.getElementById("app");
+
+// ponytail: horário que passa da meia-noite (ex. "18:00-02:00") conta como aberto de madrugada no mesmo dia da semana, não no dia seguinte
+function estaAberto(agora = new Date()) {
+  const h = LOJA.horarios[agora.getDay()];
+  if (!h) return false;
+  const [ini, fim] = h.split("-").map(t => { const [a, b] = t.split(":"); return +a * 60 + +b; });
+  const min = agora.getHours() * 60 + agora.getMinutes();
+  return fim > ini ? min >= ini && min < fim : min >= ini || min < fim;
+}
+function textoStatus() {
+  if (estaAberto()) return "Loja aberta! Faça seu pedido 😋";
+  const h = LOJA.horarios[new Date().getDay()];
+  return h ? `Loja fechada, abre hoje às ${h.split("-")[0]}` : "Loja fechada hoje";
+}
+
+// Sacola: [{ n, trio, adds: [índices de ADICIONAIS], qtd, obs }]. Fica salva só neste navegador.
+let sacola = [];
+const CHAVE = "sacola-v5"; // muda sempre que a ordem do cardápio muda (ids antigos apontariam pro item errado)
+try { sacola = JSON.parse(localStorage.getItem(CHAVE)) || []; } catch {}
+const salvar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(sacola)); } catch {} atualizarContador(); };
+const somaAdds = adds => (adds || []).reduce((s, a) => s + ADICIONAIS[a][1], 0);
+const precoItem = i => ((i.trio ? ITENS[i.n].trio : ITENS[i.n].sand) + somaAdds(i.adds)) * i.qtd;
+const subtotal = () => sacola.reduce((s, i) => s + precoItem(i), 0);
+const nomeItem = i => ITENS[i.n].titulo + (ITENS[i.n].trio == null ? "" : i.trio ? ` (Trio${i.refri ? ` – ${i.refri}` : ""})` : " (Sanduíche)")
+  + (i.adds?.length ? ` + ${i.adds.map(a => ADICIONAIS[a][0]).join(", ")}` : "");
+const selo = it => it.num ? `<span class="num">${it.num}</span>${it.desc}` : it.titulo;
+
+function atualizarContador() {
+  const c = document.getElementById("contador");
+  const qtd = sacola.reduce((s, i) => s + i.qtd, 0);
+  c.textContent = qtd; c.hidden = !qtd;
+}
+function avisar(msg) {
+  const a = document.getElementById("aviso");
+  a.textContent = msg; a.hidden = false;
+  clearTimeout(avisar.t); avisar.t = setTimeout(() => a.hidden = true, 2000);
+}
+const barra = (titulo, voltar) => `<div class="barra">${voltar ? `<button class="voltar" onclick="history.length > 1 ? history.back() : location.hash='#/'" aria-label="Voltar">‹</button>` : ""}<h1>${titulo}</h1></div>`;
+const statusHTML = () => `<div class="status ${estaAberto() ? "aberto" : "fechado"}">${textoStatus()}</div>`;
+
+// ===== Telas =====
+function telaInicio() {
+  app.innerHTML = `
+    ${barra(LOJA.nome)}
+    <div class="topo">
+      <img src="img/logo-w.jpg" alt="Logo ${LOJA.nome}" width="600" height="600">
+      <h2>
+        <span class="junto"><svg class="fita" viewBox="0 0 60 92" role="img" aria-label="Fita da conscientização do autismo">
+          <defs><pattern id="fitaPz" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="12" height="12" fill="#e63329"/><rect x="12" width="12" height="12" fill="#ffc928"/>
+            <rect y="12" width="12" height="12" fill="#1e6fd9"/><rect x="12" y="12" width="12" height="12" fill="#2bb24c"/>
+          </pattern></defs>
+          <path d="M12 88 38 40C47 24 43 6 30 6S13 24 22 40l26 48" fill="none" stroke="#000" stroke-width="13"/>
+          <path d="M12 88 38 40C47 24 43 6 30 6S13 24 22 40l26 48" fill="none" stroke="url(#fitaPz)" stroke-width="11"/>
+        </svg>Nascemos</span> para sermos incríveis,<br class="quebra"> não
+        <span class="junto">perfeitos<svg class="fita" viewBox="0 0 60 92" role="img" aria-label="Fita da conscientização do autismo">
+          <path d="M12 88 38 40C47 24 43 6 30 6S13 24 22 40l26 48" fill="none" stroke="#000" stroke-width="13"/>
+          <path d="M12 88 38 40C47 24 43 6 30 6S13 24 22 40l26 48" fill="none" stroke="url(#fitaPz)" stroke-width="11"/>
+        </svg></span>
+      </h2>
+    </div>
+    ${statusHTML()}
+    <div class="linha-info"><span>Pedido mín. ${real(LOJA.pedidoMinimo)} · Entrega ${real(LOJA.taxaKm)}/km</span><a href="#/perfil">Perfil da loja</a></div>
+    <input class="busca" id="busca" type="search" placeholder="🔍 Buscar lanche (ex.: bacon, frango, 7)" aria-label="Buscar lanche">
+    <div id="lista"></div>`;
+  const lista = document.getElementById("lista");
+  const desenhar = (q = "") => {
+    const semAcento = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    q = semAcento(q.trim());
+    const achados = ITENS.map((it, id) => [it, id]).filter(([it]) => !q || semAcento(`${it.titulo} ${it.desc}`).includes(q) || String(it.num) === q);
+    lista.innerHTML = achados.length ? CATEGORIAS.map(cat => {
+      const daCat = achados.filter(([it]) => it.cat === cat);
+      return daCat.length ? `<h2 class="categoria">${cat}</h2>` + daCat.map(([it, id]) => `
+      <a class="produto" href="#/produto/${id}">
+        <div class="txt"><b>${selo(it)}</b>${it.num ? "" : `<small>${it.desc}</small>`}
+          <div class="preco">${it.de ? `<s class="de">${real(it.de)}</s> ` : ""}${real(it.sand)}${it.trio ? ` <small>· Trio ${real(it.trio)}</small>` : ""}</div></div>
+        ${it.img ? `<img class="${it.num ? "" : "escuro foto"}" src="${it.img}" alt="" width="96" height="72" loading="lazy">` : ""}
+      </a>`).join("") : "";
+    }).join("") : `<p class="vazio">Nenhum lanche encontrado.</p>`;
+  };
+  document.getElementById("busca").oninput = e => desenhar(e.target.value);
+  desenhar();
+}
+
+function telaProduto(n) {
+  const it = ITENS[n];
+  if (!it) return (location.hash = "#/");
+  let trio = false, qtd = 1, adds = [];
+  app.innerHTML = `
+    ${barra("Detalhes do produto", true)}
+    ${it.img ? `<div class="detalhe"><img class="${it.num ? "" : "escuro"}" src="${it.img}" alt="${it.titulo}" width="196" height="106"></div>` : ""}
+    <div class="bloco"><h2>${selo(it)}</h2>${it.num ? "" : `<p>${it.desc}</p>`}<div class="preco">${it.trio ? "a partir de " : ""}${it.de ? `<s class="de">${real(it.de)}</s> ` : ""}${real(it.sand)}</div></div>
+    ${it.trio ? `
+    <div class="titulo-sec">Como você quer? <small>Obrigatório</small></div>
+    <label class="opcao"><span>Só o sanduíche</span><span>${real(it.sand)} <input type="radio" name="tipo" value="0" checked></span></label>
+    <label class="opcao"><span>Trio<br><small style="color:var(--texto-suave)">Lanche + batata frita + refri lata</small></span><span>${real(it.trio)} <input type="radio" name="tipo" value="1"></span></label>
+    <div class="bloco" id="campoRefri" hidden>
+      <label class="campo" for="refri">Sabor do refri</label>
+      <select id="refri">${REFRIS.map(r => `<option>${r}</option>`).join("")}</select>
+    </div>` : ""}
+    ${it.num ? `
+    <div class="titulo-sec">Adicionais <small>Opcional</small></div>
+    ${ADICIONAIS.map(([nome, preco], a) => `<label class="opcao"><span>${nome}</span><span>+ ${real(preco)} <input type="checkbox" name="add" value="${a}"></span></label>`).join("")}
+    <div class="titulo-sec">Complementos <small>Grátis</small></div>
+    ${COMPLEMENTOS.map(c => `<label class="opcao"><span>${c}</span><input type="checkbox" name="compl" value="${c}"></label>`).join("")}
+` : ""}
+    ${it.num || it.molhos ? `
+    <div class="titulo-sec">Molhos especiais <small>Grátis</small></div>
+    ${MOLHOS.map(m => `<label class="opcao"><span>${m}</span><input type="checkbox" name="molho" value="${m}"></label>`).join("")}` : ""}
+    ${(it.escolhas || []).map(([titulo, opcoes], g) => `
+    <div class="titulo-sec">${titulo} · escolha um <small>Obrigatório</small></div>
+    ${opcoes.map((o, k) => `<label class="opcao"><span>${o}</span><input type="radio" name="esc${g}" value="${o}" ${k ? "" : "checked"}></label>`).join("")}`).join("")}
+    ${it.cat === "Açaí" ? `
+    <div class="titulo-sec">Acompanhamentos <small>Grátis</small></div>
+    ${ACOMPANHAMENTOS.map(a => `<label class="opcao"><span>${a}</span><input type="checkbox" name="acomp" value="${a}"></label>`).join("")}
+    <div class="titulo-sec">Calda · escolha uma <small>Grátis</small></div>
+    <label class="opcao"><span>Sem calda</span><input type="radio" name="calda" value="" checked></label>
+    ${CALDAS.map(c => `<label class="opcao"><span>${c}</span><input type="radio" name="calda" value="${c}"></label>`).join("")}` : ""}
+    ${SEM_OBS.includes(it.cat) ? "" : `
+    <div class="titulo-sec">Observações</div>
+    <div class="bloco"><textarea id="obs" rows="3" maxlength="200" placeholder="Ex.: tirar cebola, sem molho, etc."></textarea></div>`}
+    <div class="rodape"><div class="dentro">
+      <div class="qtd"><button id="menos" aria-label="Diminuir">−</button><span id="q">1</span><button id="mais" aria-label="Aumentar">+</button></div>
+      <button class="btn" id="add"></button>
+    </div></div>`;
+  const atualizar = () => {
+    document.getElementById("q").textContent = qtd;
+    document.getElementById("add").textContent = `Adicionar ${real(((trio ? it.trio : it.sand) + somaAdds(adds)) * qtd)}`;
+  };
+  app.querySelectorAll("[name=tipo]").forEach(r => r.onchange = () => { trio = r.value === "1"; document.getElementById("campoRefri").hidden = !trio || !REFRIS.length; atualizar(); });
+  app.querySelectorAll("[name=add]").forEach(c => c.onchange = () => { adds = [...app.querySelectorAll("[name=add]:checked")].map(x => +x.value); atualizar(); });
+  document.getElementById("menos").onclick = () => { if (qtd > 1) qtd--; atualizar(); };
+  document.getElementById("mais").onclick = () => { qtd++; atualizar(); };
+  document.getElementById("add").onclick = () => {
+    const obs = document.getElementById("obs")?.value.trim() || "";
+    const refri = trio && REFRIS.length ? document.getElementById("refri").value : "";
+    const acomp = [...app.querySelectorAll("[name=acomp]:checked")].map(x => x.value);
+    const calda = app.querySelector("[name=calda]:checked")?.value || "";
+    const escolhidos = (it.escolhas || []).map(([titulo], g) => `${titulo}: ${app.querySelector(`[name=esc${g}]:checked`).value}`);
+    const marcados = nome => [...app.querySelectorAll(`[name=${nome}]:checked`)].map(x => x.value);
+    const compl = marcados("compl"), molhos = marcados("molho");
+    const extras = [escolhidos.join(", "), acomp.join(", "), calda && `Calda de ${calda.toLowerCase()}`,
+      compl.length && `Com ${compl.join(", ").toLowerCase()}`, molhos.length && `Molhos: ${molhos.join(", ")}`].filter(Boolean).join(" · ");
+    const igual = sacola.find(i => i.n === n && i.trio === trio && (i.refri || "") === refri && i.obs === obs && String(i.adds || []) === String(adds) && (i.extras || "") === extras);
+    igual ? igual.qtd += qtd : sacola.push({ n, trio, refri, adds, extras, qtd, obs });
+    salvar();
+    avisar("Adicionado à sacola ✔");
+    location.hash = "#/";
+  };
+  atualizar();
+}
+
+function telaSacola() {
+  if (!sacola.length) {
+    app.innerHTML = `${barra("Sacola")}<div class="vazio"><p>Sua sacola está vazia.</p><br><a class="btn" href="#/">Ver cardápio</a></div>`;
+    return;
+  }
+  app.innerHTML = `
+    ${barra("Sacola")}
+    ${statusHTML()}
+    <div class="titulo-sec">Itens</div>
+    ${sacola.map((i, k) => `
+      <div class="item-sacola">
+        <div><b>${nomeItem(i)}</b><small>${ITENS[i.n].desc}</small>${i.extras ? `<small>${i.extras}</small>` : ""}${i.obs ? `<small>Obs.: ${esc(i.obs)}</small>` : ""}<div class="preco">${real(precoItem(i))}</div><button class="remover" data-rm="${k}">🗑 Remover</button></div>
+        <div class="qtd"><button data-k="${k}" data-d="-1" aria-label="Diminuir">−</button><span>${i.qtd}</span><button data-k="${k}" data-d="1" aria-label="Aumentar">+</button></div>
+      </div>`).join("")}
+    <div class="bloco"><a href="#/">+ Adicionar mais itens</a></div>
+
+    <form id="form">
+      <div class="titulo-sec">Seus dados</div>
+      <div class="bloco">
+        <label class="campo" for="nome">Nome</label>
+        <input id="nome" type="text" required autocomplete="name" maxlength="60">
+        <label class="campo">Como quer receber?</label>
+        <label class="opcao"><span>Retirar no local<br><small class="dica">${LOJA.endereco}</small></span><input type="radio" name="receber" value="retirada" checked></label>
+        <label class="opcao"><span>Entrega por motoboy<br><small class="dica">${real(LOJA.taxaKm)} por km</small></span><input type="radio" name="receber" value="entrega"></label>
+        <div id="campoEntrega" hidden>
+          <label class="campo" for="endereco">Endereço de entrega</label>
+          <input id="endereco" type="text" maxlength="150" autocomplete="street-address" placeholder="Rua, número, bairro, ponto de referência">
+          <button type="button" class="btn-sec" id="calcular">📍 Calcular taxa pela minha localização</button>
+          <p class="dica" id="infoTaxa">Toque no botão estando no endereço de entrega.</p>
+        </div>
+        <label class="campo" for="pagamento">Forma de pagamento</label>
+        <select id="pagamento" required>${LOJA.pagamentos.map(p => `<option>${p}</option>`).join("")}</select>
+        <div id="campoTroco" hidden>
+          <label class="campo" for="troco">Troco para quanto? (opcional)</label>
+          <input id="troco" type="text" inputmode="decimal" maxlength="10" placeholder="Ex.: 50">
+        </div>
+      </div>
+      <div class="totais" id="totais"></div>
+      <div class="bloco"><button class="btn" id="enviar" type="submit">Enviar pedido pelo WhatsApp</button>
+        <p id="erro" class="vazio" style="padding:8px 0" hidden></p></div>
+    </form>`;
+
+  app.querySelectorAll(".qtd button").forEach(b => b.onclick = () => {
+    const i = sacola[b.dataset.k];
+    i.qtd += +b.dataset.d;
+    if (i.qtd < 1) sacola.splice(b.dataset.k, 1);
+    salvar(); telaSacola();
+  });
+  app.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { sacola.splice(b.dataset.rm, 1); salvar(); telaSacola(); });
+
+  const form = document.getElementById("form");
+  const ent = { km: null, taxa: null, lat: null, lon: null }; // taxa null = a combinar
+  const entrega = () => form.receber.value === "entrega";
+  const total = () => subtotal() + (entrega() && ent.taxa ? ent.taxa : 0);
+  const info = document.getElementById("infoTaxa");
+  document.getElementById("calcular").onclick = () => {
+    if (!navigator.geolocation) return (info.textContent = "Seu celular não informou a localização. A taxa será combinada pelo WhatsApp.");
+    info.textContent = "Pegando sua localização…";
+    navigator.geolocation.getCurrentPosition(async pos => {
+      info.textContent = "Calculando a distância…";
+      ent.lat = pos.coords.latitude; ent.lon = pos.coords.longitude;
+      ent.km = await distanciaKm(ent.lat, ent.lon);
+      ent.taxa = taxaEntrega(ent.km);
+      info.textContent = `Distância até a loja: ${ent.km.toFixed(1).replace(".", ",")} km → taxa de ${real(ent.taxa)}`;
+      atualizar();
+    }, () => { info.textContent = "Não conseguimos sua localização. A taxa será combinada pelo WhatsApp."; },
+    { enableHighAccuracy: true, timeout: 15000 });
+  };
+  const atualizar = () => {
+    document.getElementById("campoTroco").hidden = form.pagamento.value !== "Dinheiro";
+    document.getElementById("campoEntrega").hidden = !entrega();
+    form.endereco.required = entrega();
+    document.getElementById("totais").innerHTML = entrega() ? `
+      <div><span>Subtotal</span><span>${real(subtotal())}</span></div>
+      <div><span>Entrega${ent.km ? ` (${ent.km.toFixed(1).replace(".", ",")} km)` : ""}</span><span>${ent.taxa ? real(ent.taxa) : "a combinar"}</span></div>
+      <div class="total"><span>Total</span><span>${real(total())}</span></div>` : `
+      <div class="total"><span>Total</span><span>${real(subtotal())}</span></div>`;
+    const erro = !estaAberto() ? "A loja está fechada no momento." : subtotal() < LOJA.pedidoMinimo ? `Pedido mínimo: ${real(LOJA.pedidoMinimo)}.` : "";
+    document.getElementById("enviar").disabled = !!erro;
+    const p = document.getElementById("erro"); p.textContent = erro; p.hidden = !erro;
+  };
+  form.onchange = atualizar;
+  form.onsubmit = e => {
+    e.preventDefault();
+    const msg = montarMensagem({
+      nome: form.nome.value.trim(),
+      pagamento: form.pagamento.value, troco: form.troco.value.trim(),
+      entrega: entrega() ? { ...ent, endereco: form.endereco.value.trim() } : null,
+    });
+    window.open(`https://wa.me/${LOJA.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
+    sacola = []; salvar();
+    app.innerHTML = `${barra("Pedido enviado")}<div class="vazio"><p>✅ Seu pedido foi aberto no WhatsApp.<br>É só tocar em <b>enviar</b> lá na conversa!</p><br><a class="btn" href="#/">Voltar ao cardápio</a></div>`;
+  };
+  atualizar();
+}
+
+// Entrega: km arredondado para cima × R$ por km (2,3 km → 3 km)
+const taxaEntrega = km => Math.ceil(km) * LOJA.taxaKm;
+
+// Distância de carro pelas ruas (OSRM, grátis); se falhar, linha reta × 1,3
+async function distanciaKm(lat, lon) {
+  try {
+    const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${LOJA.lon},${LOJA.lat};${lon},${lat}?overview=false`, { signal: AbortSignal.timeout(8000) });
+    const d = await r.json();
+    if (d.code === "Ok") return d.routes[0].distance / 1000;
+  } catch {}
+  // ponytail: estimativa quando o serviço de rotas não responde; ruas costumam dar ~30% a mais que a linha reta
+  const rad = x => x * Math.PI / 180;
+  const a = Math.sin(rad(lat - LOJA.lat) / 2) ** 2 + Math.cos(rad(LOJA.lat)) * Math.cos(rad(lat)) * Math.sin(rad(lon - LOJA.lon) / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(a)) * 1.3;
+}
+
+function montarMensagem({ nome, pagamento, troco, entrega = null }) {
+  const num = String(Math.floor(1000 + Math.random() * 9000)); // nº curto pra loja casar a nota com a conversa
+  const taxa = entrega?.taxa || null;
+  const total = subtotal() + (taxa || 0);
+  const km = entrega?.km ? `${entrega.km.toFixed(1).replace(".", ",")} km` : "";
+  return [
+    `*Novo pedido #${num} – ${LOJA.nome}*`, "",
+    ...sacola.map(i => `${i.qtd}x ${nomeItem(i)} – ${real(precoItem(i))}${i.extras ? `\n   ${i.extras}` : ""}${i.obs ? `\n   Obs.: ${i.obs}` : ""}`), "",
+    ...(entrega ? [`Subtotal: ${real(subtotal())}`, `Entrega: ${taxa ? `${real(taxa)} (${km})` : "a combinar"}`] : []),
+    `*Total: ${real(total)}*`, "",
+    `Nome: ${nome}`,
+    ...(entrega ? [`🛵 Entrega em: ${entrega.endereco}`, ...(entrega.lat ? [`Localização: https://maps.google.com/?q=${entrega.lat.toFixed(6)},${entrega.lon.toFixed(6)}`] : [])] : ["Vou retirar no local"]),
+    // a loja imprime colando esta mensagem em nota.html — se mudar o formato aqui, ajuste lerTexto() lá
+    `Pagamento: ${pagamento}${pagamento === "Dinheiro" && troco ? ` (troco para R$ ${troco})` : ""}`,
+  ].join("\n");
+}
+
+function telaPerfil() {
+  const hoje = new Date().getDay();
+  app.innerHTML = `
+    ${barra("Perfil da loja", true)}
+    ${statusHTML()}
+    <div class="titulo-sec">Horário de atendimento</div>
+    <div class="lista-info">${LOJA.horarios.map((h, d) => `<div class="${d === hoje ? "hoje" : ""}"><span>${DIAS[d]}</span><span>${h ? h.replace("-", " às ") : "Fechado"}</span></div>`).join("")}</div>
+    <div class="titulo-sec">Formas de pagamento</div>
+    <div class="lista-info">${LOJA.pagamentos.map(p => `<div><span>${p}</span></div>`).join("")}</div>
+    <div class="titulo-sec">Pedidos pelo site</div>
+    <div class="lista-info"><div><span>Retirada no local</span><span>✔</span></div><div><span>Entrega por motoboy</span><span>${real(LOJA.taxaKm)} por km</span></div><div><span>Pedido mínimo</span><span>${real(LOJA.pedidoMinimo)}</span></div></div>
+    <div class="titulo-sec">Contato</div>
+    <div class="lista-info"><div><span>Telefone / WhatsApp</span><a href="https://wa.me/${LOJA.whatsapp}" target="_blank" rel="noopener">${LOJA.telefone}</a></div><div><span>Instagram</span><a href="https://instagram.com/${LOJA.instagram}" target="_blank" rel="noopener">@${LOJA.instagram}</a></div></div>
+    <div class="titulo-sec">Endereço</div>
+    <div class="bloco"><p>${LOJA.endereco}</p><br>
+      <a href="https://www.google.com/maps/search/?api=1&query=${LOJA.lat},${LOJA.lon}" target="_blank" rel="noopener">📍 Ver no mapa</a></div>`;
+}
+
+// ===== Navegação: #/ , #/produto/3 , #/sacola , #/perfil =====
+function rotear() {
+  const [, tela, arg] = location.hash.split("/");
+  const v = tela || "inicio";
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("ativo", a.dataset.v === v));
+  document.getElementById("nav").hidden = v === "produto";
+  ({ produto: () => telaProduto(+arg), sacola: telaSacola, perfil: telaPerfil }[v] || telaInicio)();
+  scrollTo(0, 0);
+}
+addEventListener("hashchange", rotear);
+atualizarContador();
+rotear();
+
+// Autoteste rápido (aparece no console do navegador se algo quebrar)
+console.assert(taxaEntrega(2.3) === 3 * LOJA.taxaKm && taxaEntrega(0.3) === LOJA.taxaKm && taxaEntrega(3) === 3 * LOJA.taxaKm, "taxa de entrega");
+console.assert(estaAberto(new Date(2026, 9, 9, 19, 0)) === !!LOJA.horarios[new Date(2026, 9, 9).getDay()], "horário: 19h");
+console.assert(!estaAberto(new Date(2026, 9, 9, 10, 0)), "horário: 10h fechado");
+</script>
+</body>
+</html>

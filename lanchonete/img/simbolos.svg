@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="210" height="210" viewBox="0 0 210 210">
+  <!-- Fundo do topo: peças de quebra-cabeça e infinito (autismo/neurodiversidade), repetido em mosaico -->
+  <defs>
+    <path id="p" d="M20 20h20a10 10 0 1 1 20 0h20v20a10 10 0 1 1 0 20v20h-20a10 10 0 1 0-20 0h-20v-20a10 10 0 1 0 0-20z"/>
+    <path id="i" d="M25 50C25 25 50 25 60 50S95 75 95 50 70 25 60 50 25 75 25 50z" fill="none" stroke="url(#a)" stroke-width="10"/>
+    <linearGradient id="a" x1="0" x2="1">
+      <stop offset="0" stop-color="#e63329"/><stop offset=".25" stop-color="#ff9f1c"/><stop offset=".45" stop-color="#ffc928"/>
+      <stop offset=".65" stop-color="#2bb24c"/><stop offset=".85" stop-color="#1e6fd9"/><stop offset="1" stop-color="#8e44ad"/>
+    </linearGradient>
+  </defs>
+  <g opacity=".6">
+    <use href="#p" fill="#e63329" transform="translate(6 8) rotate(-15 15 15) scale(.3)"/>
+    <use href="#i" transform="translate(84 2) scale(.42)"/>
+    <use href="#p" fill="#ffc928" transform="translate(150 40) rotate(20 15 15) scale(.3)"/>
+    <use href="#p" fill="#1e6fd9" transform="translate(30 100) rotate(10 15 15) scale(.3)"/>
+    <use href="#i" transform="translate(0 156) scale(.42)"/>
+    <use href="#p" fill="#2bb24c" transform="translate(108 118) rotate(-25 15 15) scale(.3)"/>
+    <use href="#i" transform="translate(140 168) scale(.42)"/>
+    <use href="#p" fill="#e63329" transform="translate(166 108) rotate(35 15 15) scale(.26)"/>
+    <use href="#p" fill="#ffc928" transform="translate(78 62) rotate(-5 15 15) scale(.26)"/>
+  </g>
+</svg>

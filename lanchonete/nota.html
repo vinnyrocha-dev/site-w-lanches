@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Imprimir pedido – W Lanches</title>
+<style>
+  /* Bobina de 80 mm (Epson TM-T20X): área útil ~72 mm */
+  @page { size: 80mm auto; margin: 0; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #eee; font-family: "Courier New", monospace; color: #000; }
+  .nota { width: 72mm; margin: 16px auto; padding: 4mm 2mm; background: #fff; font-size: 12px; line-height: 1.35; }
+  .centro { text-align: center; }
+  .grande { font-size: 18px; font-weight: 700; }
+  .linha { border-top: 1px dashed #000; margin: 6px 0; }
+  .item { display: flex; justify-content: space-between; gap: 6px; font-weight: 700; }
+  .sub { padding-left: 10px; font-size: 11px; }
+  .total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; }
+  .acoes { text-align: center; margin: 16px; font-family: system-ui, sans-serif; }
+  .acoes button { font: inherit; font-size: 18px; padding: 12px 24px; border: 0; border-radius: 10px; background: #ffc928; cursor: pointer; }
+  .colar { max-width: 520px; margin: 16px auto; padding: 16px; background: #fff; border-radius: 12px; font-family: system-ui, sans-serif; }
+  .colar h1 { font-size: 20px; margin-bottom: 8px; }
+  .colar p { margin: 8px 0; }
+  .colar button { font: inherit; font-size: 20px; font-weight: 700; width: 100%; padding: 16px; border: 0; border-radius: 10px; background: #ffc928; cursor: pointer; }
+  .colar textarea { width: 100%; font: inherit; padding: 8px; }
+  .aviso-erro { color: #b00020; font-weight: 700; }
+  @media print {
+    body { background: #fff; }
+    .nota { margin: 0; }
+    .acoes, .colar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="colar" id="colar">
+  <h1>Imprimir pedido – W Lanches</h1>
+  <p>No WhatsApp, selecione a mensagem do pedido inteira e aperte <b>Ctrl+C</b>. Depois clique no botão:</p>
+  <button id="btnColar">📋 Colar pedido e imprimir</button>
+  <p>Ou cole aqui com <b>Ctrl+V</b>:</p>
+  <textarea id="texto" rows="5" placeholder="Cole a mensagem do pedido aqui"></textarea>
+  <p id="aviso" class="aviso-erro" hidden></p>
+</div>
+<div id="nota"></div>
+<div class="acoes" id="acoes" hidden><button onclick="print()">🖨️ Imprimir de novo</button></div>
+
+<script>
+const real = v => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const esc = s => String(s).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const dinheiro = t => Number(t.replace(/[^\d,]/g, "").replace(",", "."));
+
+// Links antigos (#base64) ainda funcionam
+function lerLink() {
+  try {
+    const b64 = location.hash.slice(1).replace(/-/g, "+").replace(/_/g, "/");
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const p = JSON.parse(new TextDecoder().decode(bytes));
+    if (!Array.isArray(p.i)) throw 0;
+    return p;
+  } catch { return null; }
+}
+
+// Lê a mensagem do pedido como o site a escreve (veja montarMensagem no index.html)
+function lerTexto(txt) {
+  const linhas = txt.replace(/\*/g, "").split(/\r?\n/).map(l => l.replace(/^\[[^\]]*\][^:]*:\s*/, "").trim());
+  const p = { d: Date.now(), i: [], c: "", p: "", t: "", tot: 0 };
+  let item = null;
+  for (const l of linhas) {
+    let m;
+    if (!l) { item = null; continue; }
+    if ((m = l.match(/Novo pedido #(\d+)/))) p.n = m[1];
+    else if ((m = l.match(/^(\d+)x (.+) – (R\$\s?[\d.,]+)$/))) { item = [+m[1], m[2], dinheiro(m[3]), "", ""]; p.i.push(item); }
+    else if ((m = l.match(/^Subtotal: (.+)$/))) p.sub = dinheiro(m[1]);
+    else if ((m = l.match(/^Entrega: (.+)$/))) { const k = m[1].match(/\(([^)]+)\)/); p.tx = /combinar/.test(m[1]) ? null : dinheiro(m[1].split("(")[0]); p.km = k ? k[1] : ""; }
+    else if ((m = l.match(/^Total: (.+)$/))) p.tot = dinheiro(m[1]);
+    else if ((m = l.match(/^Nome: (.+)$/))) p.c = m[1];
+    else if ((m = l.match(/Entrega em: (.+)$/))) p.e = m[1];
+    else if ((m = l.match(/^Pagamento: (.+)$/))) { const t = m[1].match(/^(.+?) \(troco para R\$ ([^)]+)\)$/); p.p = t ? t[1] : m[1]; p.t = t ? t[2] : ""; }
+    else if (item && (m = l.match(/^Obs\.: (.+)$/))) item[4] = m[1];
+    else if (item) item[3] = item[3] ? `${item[3]} · ${l}` : l;
+  }
+  if (p.e != null && p.sub == null) p.sub = p.tot;
+  return p.i.length && p.tot ? p : null;
+}
+
+const alvo = document.getElementById("nota");
+function desenhar(p) {
+  const quando = new Date(p.d).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  alvo.className = "nota";
+  alvo.innerHTML = `
+    <div class="centro grande">W LANCHES</div>
+    <div class="centro">Pedido pelo site</div>
+    ${p.n ? `<div class="centro grande">PEDIDO #${esc(p.n)}</div>` : ""}
+    <div class="centro">${esc(quando)}</div>
+    <div class="linha"></div>
+    ${p.i.map(([qtd, nome, preco, extras, obs]) => `
+      <div class="item"><span>${esc(qtd)}x ${esc(nome)}</span><span>${real(preco)}</span></div>
+      ${extras ? `<div class="sub">${esc(extras)}</div>` : ""}
+      ${obs ? `<div class="sub">OBS: ${esc(obs)}</div>` : ""}`).join("")}
+    <div class="linha"></div>
+    ${p.e != null ? `<div class="item"><span>Subtotal</span><span>${real(p.sub)}</span></div>
+    <div class="item"><span>Entrega${p.km ? ` (${esc(p.km)})` : ""}</span><span>${p.tx ? real(p.tx) : "a combinar"}</span></div>` : ""}
+    <div class="total"><span>TOTAL</span><span>${real(p.tot)}</span></div>
+    <div>Pagamento: ${esc(p.p)}${p.t ? ` (troco p/ R$ ${esc(p.t)})` : ""}</div>
+    <div class="linha"></div>
+    <div>Cliente: <b>${esc(p.c)}</b></div>
+    ${p.e != null ? `<div class="grande">ENTREGA</div><div>${esc(p.e)}</div>` : `<div class="grande">RETIRADA NO LOCAL</div>`}
+    <div class="linha"></div>
+    <div class="centro">Obrigado pela preferência!</div>`;
+  document.getElementById("acoes").hidden = false;
+  setTimeout(print, 300); // espera a nota aparecer antes de abrir a impressão
+}
+
+const aviso = document.getElementById("aviso");
+function processar(txt) {
+  const p = lerTexto(txt);
+  aviso.hidden = !!p;
+  if (!p) return (aviso.textContent = "Não reconheci um pedido do site nesse texto. Copie a mensagem inteira, do \"Novo pedido\" até o \"Pagamento\".");
+  desenhar(p);
+}
+document.getElementById("btnColar").onclick = async () => {
+  try { processar(await navigator.clipboard.readText()); }
+  catch { aviso.hidden = false; aviso.textContent = "O navegador não deixou ler a área de transferência. Cole com Ctrl+V no quadro abaixo."; }
+};
+document.getElementById("texto").addEventListener("paste", e => processar(e.clipboardData.getData("text")));
+
+const doLink = location.hash.length > 1 && lerLink();
+if (doLink) desenhar(doLink);
+
+// Autoteste do leitor com uma mensagem no formato do site
+const teste = lerTexto("[20:47, 10/10/2026] Maria: *Novo pedido #9168 – W Lanches*\n\n2x Nº 5 (Sanduíche) – R$ 34,00\n   Sabor: Uva\n   Obs.: sem cebola\n\nSubtotal: R$ 34,00\nEntrega: R$ 16,00 (3,5 km)\n*Total: R$ 50,00*\n\nNome: Maria\n🛵 Entrega em: Rua A, 10\nLocalização: https://maps.google.com/?q=1,2\nPagamento: Dinheiro (troco para R$ 100)");
+console.assert(teste && teste.n === "9168" && teste.i[0][0] === 2 && teste.i[0][2] === 34 && teste.i[0][3] === "Sabor: Uva" && teste.i[0][4] === "sem cebola" && teste.tx === 16 && teste.tot === 50 && teste.e === "Rua A, 10" && teste.t === "100", "leitor de pedido", teste);
+</script>
+</body>
+</html>
