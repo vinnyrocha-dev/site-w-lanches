@@ -6,4 +6,4 @@ Site de pedidos da W Lanches (Belford Roxo – RJ).
 - `lanchonete/nota.html` — página de impressão da notinha (Epson TM-T20X)
 - `W-Lanches-como-imprimir-a-notinha.pdf` — instruções da impressora para a loja
 
-No ar em: https://wlanches.wlanches-rj.workers.dev
+No ar em: https://wlanches.viniciusdev.workers.dev
