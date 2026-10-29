@@ -1,13 +1,15 @@
 // Planilha de pedidos da W Lanches.
 // Recebe cada pedido enviado pelo site (função salvarNaPlanilha em lanchonete/index.html)
-// e grava nas abas "Pedidos" e "Itens". A aba "Relatório" soma só os pedidos marcados como Confirmado.
+// e grava nas abas "Pedidos" e "Itens" com status Pendente. A loja troca o status para Pago ou Cancelado
+// na lista da coluna Status; a aba "Relatório" soma só os pedidos Pagos.
 //
 // Instalação: cole este arquivo em Extensões → Apps Script da planilha, rode "configurar" uma vez
 // e implante como App da Web (Executar como: eu; Quem pode acessar: qualquer pessoa).
 
 const FUSO = 'America/Sao_Paulo';
-const PEDIDOS = ['Data', 'Hora', 'Nº pedido', 'Cliente', 'Recebimento', 'Endereço', 'Itens', 'Subtotal', 'Entrega', 'Total', 'Pagamento', 'Troco', 'Confirmado', 'ID'];
-const ITENS = ['Data', 'Nº pedido', 'Item', 'Qtd', 'Valor', 'ID', 'Confirmado'];
+const PEDIDOS = ['Data', 'Hora', 'Nº pedido', 'Cliente', 'Recebimento', 'Endereço', 'Itens', 'Subtotal', 'Entrega', 'Total', 'Pagamento', 'Troco', 'Status', 'ID'];
+const ITENS = ['Data', 'Nº pedido', 'Item', 'Qtd', 'Valor', 'ID', 'Status'];
+const STATUS = ['Pendente', 'Pago', 'Cancelado'];
 
 // O site envia um texto JSON. Tudo que vem de fora é limitado em tamanho e tipo antes de entrar na planilha.
 function doPost(e) {
@@ -25,12 +27,12 @@ function doPost(e) {
     const entrega = p.recebimento === 'Entrega' ? (p.taxaCombinar ? 'a combinar' : p.taxa) : '';
     const endereco = p.recebimento === 'Entrega' ? p.endereco + (p.km !== '' ? ' (' + p.km + ' km)' : '') : '';
     ss.getSheetByName('Pedidos').appendRow([dia, hora, p.num, p.cliente, p.recebimento, endereco, resumo,
-      p.subtotal, entrega, p.total, p.pagamento, p.troco, false, id]);
+      p.subtotal, entrega, p.total, p.pagamento, p.troco, 'Pendente', id]);
 
     const abaItens = ss.getSheetByName('Itens');
     const linha = abaItens.getLastRow() + 1;
     const linhas = p.itens.map((i, k) => [dia, p.num, i.item, i.qtd, i.valor, id,
-      '=IFERROR(INDEX(Pedidos!M:M,MATCH(F' + (linha + k) + ',Pedidos!N:N,0)),FALSE)']);
+      '=IFERROR(INDEX(Pedidos!M:M,MATCH(F' + (linha + k) + ',Pedidos!N:N,0)),"")']);
     abaItens.getRange(linha, 1, linhas.length, ITENS.length).setValues(linhas);
     return ContentService.createTextOutput('ok');
   } catch (err) {
@@ -76,7 +78,9 @@ function configurar() {
   const ped = aba('Pedidos', PEDIDOS);
   ped.getRange('A2:A').setNumberFormat('dd/MM/yyyy');
   ped.getRange('H2:J').setNumberFormat('R$ #,##0.00');
-  ped.getRange('M2:M').insertCheckboxes();
+  ped.getRange('M2:M').setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(STATUS, true).setAllowInvalid(false).build());
+  const cor = (texto, fundo) => SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(texto).setBackground(fundo).setRanges([ped.getRange('M2:M')]).build();
+  ped.setConditionalFormatRules([cor('Pendente', '#fff3c4'), cor('Pago', '#c8f0d2'), cor('Cancelado', '#f8c9c4')]);
   ped.getRange('G2:G').setWrap(true);
   ped.hideColumns(14);
   const it = aba('Itens', ITENS);
@@ -86,10 +90,10 @@ function configurar() {
 
   const rel = ss.getSheetByName('Relatório') || ss.insertSheet('Relatório', 0);
   rel.clear();
-  const conf = 'Pedidos!M:M,TRUE';
+  const conf = 'Pedidos!M:M,"Pago"';
   const inicioSemana = 'TODAY()-WEEKDAY(TODAY(),2)+1';
   const inicioMes = 'DATE(YEAR(TODAY()),MONTH(TODAY()),1)';
-  rel.getRange('A1:C1').setValues([['Relatório (só pedidos confirmados)', '', '']]).setFontWeight('bold');
+  rel.getRange('A1:C1').setValues([['Relatório (só pedidos pagos)', '', '']]).setFontWeight('bold');
   rel.getRange('A3:C3').setValues([['', 'Vendas (R$)', 'Pedidos']]).setFontWeight('bold');
   rel.getRange('A4:C7').setValues([
     ['Hoje', '=SUMIFS(Pedidos!J:J,Pedidos!A:A,TODAY(),' + conf + ')', '=COUNTIFS(Pedidos!A:A,TODAY(),' + conf + ')'],
@@ -99,8 +103,10 @@ function configurar() {
   ]);
   rel.getRange('B4:B7').setNumberFormat('R$ #,##0.00');
   rel.getRange('A9').setValue('Mais vendidos no mês').setFontWeight('bold');
-  rel.getRange('A10').setFormula('=IFERROR(QUERY(Itens!A:G,"select C, sum(D), sum(E) where G = true and A >= date \'"&TEXT(' + inicioMes +
-    ',"yyyy-mm-dd")&"\' group by C order by sum(D) desc limit 10 label C \'Item\', sum(D) \'Qtd\', sum(E) \'Valor\'",1),"Nenhuma venda confirmada no mês")');
+  rel.getRange('A10').setFormula('=IFERROR(QUERY(Itens!A:G,"select C, sum(D), sum(E) where G = \'Pago\' and A >= date \'"&TEXT(' + inicioMes +
+    ',"yyyy-mm-dd")&"\' group by C order by sum(D) desc limit 10 label C \'Item\', sum(D) \'Qtd\', sum(E) \'Valor\'",1),"Nenhuma venda paga no mês")');
+  rel.getRange('A22:C22').setValues([['Pedidos pendentes (todos)', '', '=COUNTIF(Pedidos!M:M,"Pendente")']]);
+  rel.getRange('A23:C23').setValues([['Pedidos cancelados no mês', '', '=COUNTIFS(Pedidos!A:A,">="&' + inicioMes + ',Pedidos!M:M,"Cancelado")']]);
   rel.setColumnWidth(1, 230);
   const sobra = ss.getSheetByName('Página1') || ss.getSheetByName('Sheet1');
   if (sobra && ss.getSheets().length > 3) ss.deleteSheet(sobra);
