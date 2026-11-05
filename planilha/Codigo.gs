@@ -52,7 +52,8 @@ function montarPedidos(ss) {
   sh.setTabColor(COR.amarelo);
   sh.getRange('A2:A').setNumberFormat('dd/MM/yyyy');
   sh.getRange('H2:J').setNumberFormat(REAL);
-  ['B2:D', 'F2:G', 'K2:L'].forEach(r => sh.getRange(r).setNumberFormat('@')); // texto puro: a planilha não transforma "19:30" ou "1/2" em hora ou data
+  sh.getRange('B2:B').setNumberFormat('HH:mm');
+  ['C2:D', 'F2:G', 'K2:L'].forEach(r => sh.getRange(r).setNumberFormat('@')); // texto puro: a planilha não transforma um nome como "1/2" em data
   sh.getRange('J2:J').setFontWeight('bold');
   ['A2:C', 'E2:E', 'K2:M'].forEach(r => sh.getRange(r).setHorizontalAlignment('center'));
   sh.getRange('F2:G').setWrap(true);
