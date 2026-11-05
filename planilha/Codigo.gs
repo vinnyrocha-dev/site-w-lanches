@@ -160,10 +160,10 @@ function montarRelatorio(ss) {
   sh.getRange('B12').setFormula('=IFERROR(QUERY({Itens!A2:E,ARRAYFORMULA(IFERROR(VLOOKUP(Itens!F2:F,{Pedidos!N2:N,Pedidos!M2:M},2,FALSE),""))},' +
     '"select Col3, sum(Col4), sum(Col5) where Col6 = \'Pago\' and Col1 >= date \'"&YEAR(TODAY())&"-"&RIGHT("0"&MONTH(TODAY()),2)&"-01\' ' +
     'group by Col3 order by sum(Col4) desc limit 10 label sum(Col4) \'\', sum(Col5) \'\'",0),"Nenhuma venda paga no mês")');
-  sh.getRange('B25').setFormula('=IFERROR(LET(q,QUERY(Pedidos!A2:M,"select year(A), month(A)+1, sum(J), count(J), sum(J)/count(J) where M = \'Pago\' ' +
+  sh.getRange('B25').setFormula('=IF(COUNTIF(Pedidos!M:M,"Pago")=0,"Nenhuma venda paga ainda",LET(q,QUERY(Pedidos!A2:M,"select year(A), month(A)+1, sum(J), count(J), sum(J)/count(J) where M = \'Pago\' ' +
     'group by year(A), month(A)+1 order by year(A) desc, month(A)+1 desc limit 24 ' +
     'label year(A) \'\', month(A)+1 \'\', sum(J) \'\', count(J) \'\', sum(J)/count(J) \'\'",0),' +
-    '{ARRAYFORMULA(TEXT(INDEX(q,,2),"00")&"/"&INDEX(q,,1)),INDEX(q,,3),INDEX(q,,4),INDEX(q,,5)}),"Nenhuma venda paga ainda")');
+    '{ARRAYFORMULA(TEXT(INDEX(q,,2),"00")&"/"&INDEX(q,,1)),INDEX(q,,3),INDEX(q,,4),INDEX(q,,5)}))');
   SpreadsheetApp.flush();
   ss.setSpreadsheetLocale(idioma);
 }
