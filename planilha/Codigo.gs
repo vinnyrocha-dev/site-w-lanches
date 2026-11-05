@@ -107,7 +107,7 @@ function montarRelatorio(ss) {
   // Pendentes e cancelados
   sh.getRange('B8:C8').setBackground('#fff3c4').setFontColor('#7a5b00').setFontWeight('bold');
   sh.getRange('D8:E8').setBackground('#f8c9c4').setFontColor('#8f1d14').setFontWeight('bold');
-  sh.getRange('B8').setValue('Pedidos pendentes (a conferir)');
+  sh.getRange('B8').setValue('Pedidos pendentes');
   sh.getRange('D8').setValue('Cancelados no mês');
   sh.getRange('C8').setHorizontalAlignment('right');
   sh.getRange('E8').setHorizontalAlignment('right');
@@ -132,7 +132,7 @@ function montarRelatorio(ss) {
   const semana = '">="&(TODAY()-WEEKDAY(TODAY(),2)+1)';
   const mes = '">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1)';
   const soma = criterio => '=SUMIFS(Pedidos!J:J,Pedidos!A:A,' + criterio + ',' + pago + ')';
-  const conta = criterio => '=COUNTIFS(Pedidos!A:A,' + criterio + ',' + pago + ')&" pedidos"';
+  const conta = criterio => '=COUNTIFS(Pedidos!A:A,' + criterio + ',' + pago + ')&IF(COUNTIFS(Pedidos!A:A,' + criterio + ',' + pago + ')=1," pedido"," pedidos")';
   sh.getRange('B5').setFormula(soma('TODAY()'));
   sh.getRange('B6').setFormula(conta('TODAY()'));
   sh.getRange('C5').setFormula(soma(semana));
