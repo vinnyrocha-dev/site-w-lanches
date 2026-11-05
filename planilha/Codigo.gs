@@ -52,6 +52,7 @@ function montarPedidos(ss) {
   sh.setTabColor(COR.amarelo);
   sh.getRange('A2:A').setNumberFormat('dd/MM/yyyy');
   sh.getRange('H2:J').setNumberFormat(REAL);
+  ['B2:D', 'F2:G', 'K2:L'].forEach(r => sh.getRange(r).setNumberFormat('@')); // texto puro: a planilha não transforma "19:30" ou "1/2" em hora ou data
   sh.getRange('J2:J').setFontWeight('bold');
   ['A2:C', 'E2:E', 'K2:M'].forEach(r => sh.getRange(r).setHorizontalAlignment('center'));
   sh.getRange('F2:G').setWrap(true);
@@ -68,6 +69,7 @@ function montarItens(ss) {
   sh.hideColumns(6);
   sh.getRange('A2:A').setNumberFormat('dd/MM/yyyy');
   sh.getRange('E2:E').setNumberFormat(REAL);
+  sh.getRange('B2:C').setNumberFormat('@');
   ['A2:B', 'D2:D'].forEach(r => sh.getRange(r).setHorizontalAlignment('center'));
 }
 
@@ -171,24 +173,25 @@ function montarRelatorio(ss) {
 // O site envia um texto JSON. Tudo que vem de fora é limitado em tamanho e tipo antes de entrar na planilha.
 function doPost(e) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
   try {
+    lock.waitLock(30000);
     const p = lerPedido(JSON.parse(e.postData.contents));
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const agora = new Date();
-    const dia = new Date(Utilities.formatDate(agora, FUSO, "yyyy-MM-dd'T'00:00:00"));
+    // Número de série da data, sem hora: um objeto Date mudaria de dia conforme o fuso do script e não bateria com HOJE()
+    const [ano, mes, d] = Utilities.formatDate(agora, FUSO, 'yyyy-M-d').split('-').map(Number);
+    const dia = Date.UTC(ano, mes - 1, d) / 86400000 + 25569;
     const hora = Utilities.formatDate(agora, FUSO, 'HH:mm');
     const id = String(agora.getTime()) + '-' + p.num;
 
     const resumo = p.itens.map(i => i.qtd + 'x ' + i.detalhe + (i.extras ? ' (' + i.extras + ')' : '') + (i.obs ? ' – Obs.: ' + i.obs : '')).join('\n');
     const entrega = p.recebimento === 'Entrega' ? (p.taxaCombinar ? 'a combinar' : p.taxa) : '';
-    const endereco = p.recebimento === 'Entrega' ? p.endereco + (p.km !== '' ? ' (' + p.km + ' km)' : '') : '';
+    const endereco = p.recebimento === 'Entrega' ? p.endereco + (p.km !== '' ? ' (' + String(p.km).replace('.', ',') + ' km)' : '') : '';
     ss.getSheetByName('Pedidos').appendRow([dia, hora, p.num, p.cliente, p.recebimento, endereco, resumo,
       p.subtotal, entrega, p.total, p.pagamento, p.troco, 'Pendente', id]);
 
     const abaItens = ss.getSheetByName('Itens');
-    const linhas = p.itens.map(i => [dia, p.num, i.item, i.qtd, i.valor, id]);
-    abaItens.getRange(abaItens.getLastRow() + 1, 1, linhas.length, ITENS.length).setValues(linhas);
+    p.itens.forEach(i => abaItens.appendRow([dia, p.num, i.item, i.qtd, i.valor, id])); // appendRow cria linha nova quando a aba enche
     return ContentService.createTextOutput('ok');
   } catch (err) {
     return ContentService.createTextOutput('erro: ' + err.message);
@@ -200,7 +203,7 @@ function doPost(e) {
 function lerPedido(d) {
   const texto = (v, max) => String(v == null ? '' : v).replace(/^[=+\-@]+/, '').slice(0, max); // tira "=" do começo: ninguém injeta fórmula
   const numero = v => { const n = Number(v); if (!isFinite(n) || n < 0 || n > 100000) throw new Error('valor inválido'); return Math.round(n * 100) / 100; };
-  if (!d || !Array.isArray(d.itens) || !d.itens.length || d.itens.length > 60) throw new Error('pedido sem itens');
+  if (!d || !Array.isArray(d.itens) || !d.itens.length || d.itens.length > 200) throw new Error('pedido sem itens');
   return {
     num: texto(d.num, 6),
     cliente: texto(d.cliente, 60),

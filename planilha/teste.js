@@ -9,7 +9,7 @@ const sheet = nome => (abas[nome] ? {
 const planilha = { getSheetByName: sheet, setSpreadsheetLocale: l => idiomas.push(l), getSpreadsheetLocale: () => 'pt_BR', setSpreadsheetTimeZone() {} };
 global.LockService = { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) };
 global.SpreadsheetApp = { getActiveSpreadsheet: () => planilha, flush() {}, newDataValidation: () => cadeia, newConditionalFormatRule: () => cadeia, BandingTheme: {}, BorderStyle: {} };
-global.Utilities = { formatDate: (d, tz, f) => f === 'HH:mm' ? '19:30' : '2026-10-29T00:00:00' };
+global.Utilities = { formatDate: (d, tz, f) => f === 'HH:mm' ? '19:30' : '2026-11-5' };
 global.ContentService = { createTextOutput: t => t };
 eval(fs.readFileSync(path.join(__dirname, 'Codigo.gs'), 'utf8') + '; global.doPost = doPost; global.montarRelatorio = montarRelatorio; global.montarPedidos = montarPedidos;');
 
@@ -19,7 +19,7 @@ const pedido = { num: '1234', cliente: 'Maria', pagamento: 'Dinheiro', troco: '1
   subtotal: 68, taxa: 16, total: 84 };
 assert.strictEqual(enviar(pedido), 'ok');
 const p = abas.Pedidos[0];
-assert.deepStrictEqual([p[1], p[2], p[3], p[4], p[5]], ['19:30', '1234', 'Maria', 'Entrega', 'Rua A, 10 (3.4 km)']);
+assert.deepStrictEqual(p.slice(0, 6), [46331, '19:30', '1234', 'Maria', 'Entrega', 'Rua A, 10 (3,4 km)']); // 46331 = 05/11/2026
 assert.ok(p[6].includes('2x Nº 7 (Trio) + Bacon (Molhos: Barbecue) – Obs.: sem cebola'));
 assert.deepStrictEqual(p.slice(7, 13), [68, 16, 84, 'Dinheiro', '100', 'Pendente']);
 assert.strictEqual(abas.Itens.length, 2);
@@ -32,6 +32,11 @@ assert.ok(enviar({ ...pedido, itens: [] }).startsWith('erro'));
 assert.ok(enviar('lixo').startsWith('erro'));
 enviar({ ...pedido, recebimento: 'Retirada', taxa: 0, total: 68 });
 assert.deepStrictEqual([abas.Pedidos.at(-1)[4], abas.Pedidos.at(-1)[5], abas.Pedidos.at(-1)[8]], ['Retirada', '', '']);
+
+// pedido enorme (61 itens diferentes, como o cardápio inteiro) também entra
+const antes = abas.Itens.length;
+assert.strictEqual(enviar({ ...pedido, itens: Array.from({ length: 61 }, (_, i) => ({ item: 'x' + i, detalhe: 'x', qtd: 1, valor: 1 })) }), 'ok');
+assert.strictEqual(abas.Itens.length, antes + 61);
 
 // relatório: toda fórmula é gravada com o idioma en_US e o idioma original volta no fim
 montarRelatorio({ ...planilha, getSheetByName: () => cadeia });
