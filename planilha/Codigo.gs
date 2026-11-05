@@ -78,9 +78,10 @@ function montarRelatorio(ss) {
   sh.setHiddenGridlines(true);
   sh.setTabColor(COR.preto);
   if (sh.getMaxColumns() > 6) sh.deleteColumns(7, sh.getMaxColumns() - 6);
-  if (sh.getMaxRows() > 26) sh.deleteRows(27, sh.getMaxRows() - 26);
+  if (sh.getMaxRows() > 50) sh.deleteRows(51, sh.getMaxRows() - 50);
+  if (sh.getMaxRows() < 50) sh.insertRowsAfter(sh.getMaxRows(), 50 - sh.getMaxRows());
   [24, 190, 190, 190, 190, 24].forEach((w, i) => sh.setColumnWidth(i + 1, w));
-  sh.getRange('A1:F26').setFontFamily('Arial').setFontColor(COR.texto).setVerticalAlignment('middle');
+  sh.getRange('A1:F50').setFontFamily('Arial').setFontColor(COR.texto).setVerticalAlignment('middle');
 
   // Cabeçalho
   sh.getRange('A1:F2').setBackground(COR.preto);
@@ -123,6 +124,18 @@ function montarRelatorio(ss) {
   sh.getRange('D12:D21').setNumberFormat(REAL);
   sh.getRange('B12:D21').setBorder(null, null, true, null, null, true, COR.linha, SpreadsheetApp.BorderStyle.SOLID);
 
+  // Histórico por mês (24 meses, do mais recente para o mais antigo)
+  sh.setRowHeight(22, 14);
+  sh.getRange('B23').setValue('HISTÓRICO POR MÊS').setFontSize(11).setFontWeight('bold');
+  sh.setRowHeight(23, 28);
+  sh.getRange('B24:E24').setValues([['Mês', 'Vendas', 'Pedidos', 'Valor médio']]).setBackground(COR.preto).setFontColor(COR.amarelo).setFontWeight('bold');
+  sh.setRowHeight(24, 30);
+  sh.getRange('C24:E48').setHorizontalAlignment('right');
+  sh.getRange('D24:D48').setHorizontalAlignment('center');
+  sh.getRange('C25:C48').setNumberFormat(REAL);
+  sh.getRange('E25:E48').setNumberFormat(REAL);
+  sh.getRange('B25:E48').setBorder(null, null, true, null, null, true, COR.linha, SpreadsheetApp.BorderStyle.SOLID);
+
   // O script escreve fórmulas no padrão en_US (vírgula). Em planilha pt_BR isso dá "Formula parse error",
   // então troca o idioma só enquanto grava: o Google guarda a fórmula e depois mostra com ponto e vírgula.
   const idioma = ss.getSpreadsheetLocale();
@@ -147,6 +160,10 @@ function montarRelatorio(ss) {
   sh.getRange('B12').setFormula('=IFERROR(QUERY({Itens!A2:E,ARRAYFORMULA(IFERROR(VLOOKUP(Itens!F2:F,{Pedidos!N2:N,Pedidos!M2:M},2,FALSE),""))},' +
     '"select Col3, sum(Col4), sum(Col5) where Col6 = \'Pago\' and Col1 >= date \'"&YEAR(TODAY())&"-"&RIGHT("0"&MONTH(TODAY()),2)&"-01\' ' +
     'group by Col3 order by sum(Col4) desc limit 10 label sum(Col4) \'\', sum(Col5) \'\'",0),"Nenhuma venda paga no mês")');
+  sh.getRange('B25').setFormula('=IFERROR(LET(q,QUERY(Pedidos!A2:M,"select year(A), month(A)+1, sum(J), count(J), sum(J)/count(J) where M = \'Pago\' ' +
+    'group by year(A), month(A)+1 order by year(A) desc, month(A)+1 desc limit 24 ' +
+    'label year(A) \'\', month(A)+1 \'\', sum(J) \'\', count(J) \'\', sum(J)/count(J) \'\'",0),' +
+    '{ARRAYFORMULA(TEXT(INDEX(q,,2),"00")&"/"&INDEX(q,,1)),INDEX(q,,3),INDEX(q,,4),INDEX(q,,5)}),"Nenhuma venda paga ainda")');
   SpreadsheetApp.flush();
   ss.setSpreadsheetLocale(idioma);
 }
