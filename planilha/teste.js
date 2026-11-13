@@ -19,7 +19,7 @@ global.Utilities.computeDigest = (_algoritmo, texto) => require('crypto').create
 global.Utilities.base64EncodeWebSafe = bytes => bytes.toString('base64url');
 global.Utilities.DigestAlgorithm = { SHA_256: 'SHA_256' };
 global.Utilities.Charset = { UTF_8: 'UTF_8' };
-eval(fs.readFileSync(path.join(__dirname, 'Codigo.gs'), 'utf8') + '; global.registrarPedido = registrarPedido; global.montarRelatorio = montarRelatorio; global.montarPedidos = montarPedidos;');
+eval(fs.readFileSync(path.join(__dirname, 'Codigo.gs'), 'utf8') + '; global.registrarPedido = registrarPedido; global.ativarBackup = ativarBackup; global.fazerBackup = fazerBackup; global.montarRelatorio = montarRelatorio; global.montarPedidos = montarPedidos;');
 
 const enviar = registrarPedido;
 const pedido = { num: '1234', cliente: 'Maria', pagamento: 'Dinheiro', troco: '100', recebimento: 'Entrega', endereco: 'Rua A, 10', km: 3.4, taxaCombinar: false,
@@ -66,4 +66,26 @@ assert.ok(formulas.length >= 9 && formulas.every(([idioma]) => idioma === 'en_US
 assert.strictEqual(idiomas.at(-1), 'pt_BR');
 const query = formulas.find(([, f]) => f.includes('QUERY'))[1];
 assert.ok(query.includes("Col6 = 'Pago'") && !query.includes('TEXT('));
+// backup: cria a pasta, copia a planilha, mantém só as 12 mais novas e agenda um gatilho semanal único
+{
+  const lixo = [], copias = [], gatilhos = [{ getHandlerFunction: () => 'fazerBackup' }];
+  let criadaEm = 0, pastaCriada = 0;
+  const pasta = { getFiles: () => { let i = 0; return { hasNext: () => i < copias.length, next: () => copias[i++] }; } };
+  global.DriveApp = {
+    getFoldersByName: () => ({ hasNext: () => pastaCriada > 0, next: () => pasta }),
+    createFolder: () => (pastaCriada++, pasta),
+    getFileById: () => ({ makeCopy: () => { const n = ++criadaEm; let lixeira = false; copias.push({ getDateCreated: () => n, isTrashed: () => lixeira, setTrashed: v => { lixeira = v; lixo.push(n); } }); } }),
+  };
+  const cadeiaG = { timeBased: () => cadeiaG, onWeekDay: () => cadeiaG, atHour: () => cadeiaG, create: () => gatilhos.push({ getHandlerFunction: () => 'fazerBackup' }) };
+  global.ScriptApp = { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: t => gatilhos.splice(gatilhos.indexOf(t), 1), newTrigger: () => cadeiaG, WeekDay: { MONDAY: 'MONDAY' } };
+  global.Utilities.formatDate = () => '2026-11-13';
+  ativarBackup();
+  assert.strictEqual(gatilhos.length, 1);
+  assert.deepStrictEqual([pastaCriada, copias.length], [1, 1]);
+  for (let i = 0; i < 14; i++) fazerBackup();
+  assert.strictEqual(pastaCriada, 1);
+  assert.strictEqual(copias.filter(c => !c.isTrashed()).length, 12);
+  assert.ok(copias.filter(c => !c.isTrashed()).every(c => c.getDateCreated() > 3)); // ficaram as mais novas
+}
+
 console.log('todos os testes passaram\n' + query);

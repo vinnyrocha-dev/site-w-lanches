@@ -2,6 +2,10 @@
 <html lang="pt-BR" class="escuro">
 <head>
 <meta charset="utf-8">
+<script>
+  // O endereço workers.dev também responde em http; leva quem chegar assim para a versão segura
+  if (location.protocol === "http:" && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) location.replace("https:" + location.href.slice(5));
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>W Lanches</title>
 <meta name="description" content="W Lanches: aqui você pede pelo número. Monte seu pedido e envie pelo WhatsApp.">
@@ -14,9 +18,9 @@
 <meta property="og:image" content="https://wlanches.viniciusdev.workers.dev/img/logo-w.jpg">
 <meta property="og:url" content="https://wlanches.viniciusdev.workers.dev/">
 <meta property="og:type" content="website">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
+  /* Fonte servida pelo próprio site: o navegador do cliente não contata o Google ao abrir o cardápio */
+  @font-face { font-family: "Bebas Neue"; font-style: normal; font-weight: 400; font-display: swap; src: url(fontes/bebas-neue-latin.woff2) format("woff2"); }
   /* Paleta da marca: amarelo = ação, vermelho do "W" = destaque/alerta.
      Tema claro é o padrão; para voltar ao escuro, troque <html lang="pt-BR"> por <html lang="pt-BR" class="escuro"> */
   :root {
@@ -109,6 +113,10 @@
   .totais { margin: 0 16px; padding: 14px; background: var(--superficie-2); border-radius: var(--raio); }
   .totais div { display: flex; justify-content: space-between; padding: 3px 0; color: var(--texto-suave); }
   .totais .total { font-weight: 800; font-size: 1.2rem; color: var(--destaque); border-top: 1px solid var(--linha); margin-top: 6px; padding-top: 8px; }
+  .legal { text-align: center; padding: 24px 16px 8px; font-size: .82rem; color: var(--texto-suave); }
+  .legal a { color: var(--texto-suave); }
+  .aviso-legal { font-size: .78rem; color: var(--texto-suave); text-align: center; margin-top: 10px; }
+  .aviso-legal a { color: var(--texto-suave); }
   .vazio { text-align: center; padding: 48px 16px; color: var(--texto-suave); }
   .lista-info div { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--linha); }
   .lista-info .hoje { font-weight: 700; background: var(--sel); }
@@ -332,7 +340,8 @@ function telaInicio() {
     ${statusHTML()}
     <div class="linha-info"><span>Pedido mín. ${real(LOJA.pedidoMinimo)}</span><a href="#/perfil">Perfil da loja</a></div>
     <input class="busca" id="busca" type="search" placeholder="🔍 Buscar lanche (ex.: bacon, frango, 7)" aria-label="Buscar lanche">
-    <div id="lista"></div>`;
+    <div id="lista"></div>
+    <p class="legal"><a href="privacidade.html">Política de Privacidade</a> · <a href="termos.html">Termos de Uso</a></p>`;
   const lista = document.getElementById("lista");
   const desenhar = (q = "") => {
     const semAcento = t => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -459,6 +468,7 @@ function telaSacola() {
       </div>
       <div class="totais" id="totais"></div>
       <div class="bloco"><button class="btn" id="enviar" type="submit">Enviar pedido pelo WhatsApp</button>
+        <p class="aviso-legal">Usamos seu nome e, na entrega, seu endereço só para preparar e entregar o pedido. Ao enviar, você concorda com os <a href="termos.html" target="_blank">Termos de Uso</a> e a <a href="privacidade.html" target="_blank">Política de Privacidade</a>.</p>
         <p id="erro" class="vazio" style="padding:8px 0" hidden></p></div>
     </form>`;
 
@@ -565,7 +575,9 @@ function telaPerfil() {
     <div class="lista-info"><div><span>Telefone / WhatsApp</span><a href="https://wa.me/${LOJA.whatsapp}" target="_blank" rel="noopener">${LOJA.telefone}</a></div><div><span>Instagram</span><a href="https://instagram.com/${LOJA.instagram}" target="_blank" rel="noopener">@${LOJA.instagram}</a></div></div>
     <div class="titulo-sec">Endereço</div>
     <div class="bloco"><p>${LOJA.endereco}</p><br>
-      <a href="https://www.google.com/maps/search/?api=1&query=${LOJA.lat},${LOJA.lon}" target="_blank" rel="noopener">📍 Ver no mapa</a></div>`;
+      <a href="https://www.google.com/maps/search/?api=1&query=${LOJA.lat},${LOJA.lon}" target="_blank" rel="noopener">📍 Ver no mapa</a></div>
+    <div class="titulo-sec">Seus dados</div>
+    <div class="lista-info"><div><span>Política de Privacidade</span><a href="privacidade.html">Ler</a></div><div><span>Termos de Uso</span><a href="termos.html">Ler</a></div><div><span>Pedidos sobre seus dados</span><a href="https://wa.me/${LOJA.whatsapp}?text=${encodeURIComponent("Olá! Quero fazer uma solicitação sobre meus dados pessoais (LGPD).")}" target="_blank" rel="noopener">WhatsApp</a></div></div>`;
 }
 
 // ===== Navegação: #/ , #/produto/3 , #/sacola , #/perfil =====

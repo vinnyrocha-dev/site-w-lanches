@@ -171,6 +171,29 @@ function montarRelatorio(ss) {
   ss.setSpreadsheetLocale(idioma);
 }
 
+// Backup: uma cópia da planilha por semana numa pasta do Drive da loja, guardando as 12 mais recentes.
+// Rode ativarBackup uma vez; ele faz a primeira cópia na hora e agenda as próximas.
+const PASTA_BACKUP = 'Backups – Pedidos W Lanches';
+const COPIAS_GUARDADAS = 12;
+
+function ativarBackup() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'fazerBackup').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('fazerBackup').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(4).create();
+  fazerBackup();
+}
+
+function fazerBackup() {
+  const id = PropertiesService.getScriptProperties().getProperty('PLANILHA_ID') || SpreadsheetApp.getActiveSpreadsheet().getId();
+  const pastas = DriveApp.getFoldersByName(PASTA_BACKUP);
+  const pasta = pastas.hasNext() ? pastas.next() : DriveApp.createFolder(PASTA_BACKUP);
+  const quando = Utilities.formatDate(new Date(), FUSO, 'yyyy-MM-dd');
+  DriveApp.getFileById(id).makeCopy('Backup ' + quando + ' – Pedidos W Lanches', pasta);
+  const copias = [];
+  const arquivos = pasta.getFiles();
+  while (arquivos.hasNext()) { const f = arquivos.next(); if (!f.isTrashed()) copias.push(f); }
+  copias.sort((x, y) => y.getDateCreated() - x.getDateCreated()).slice(COPIAS_GUARDADAS).forEach(f => f.setTrashed(true));
+}
+
 function vincularPlanilha() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss.getSheetByName('Pedidos') || !ss.getSheetByName('Itens')) {

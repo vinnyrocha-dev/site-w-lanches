@@ -4,6 +4,8 @@ Site de pedidos da W Lanches (Belford Roxo – RJ).
 
 - `lanchonete/` — o site (é esta pasta que sobe no Cloudflare)
 - `lanchonete/nota.html` — página de impressão da notinha (Epson TM-T20X)
+- `lanchonete/privacidade.html` e `lanchonete/termos.html` — Política de Privacidade (LGPD) e Termos de Uso
+- `lanchonete/_headers` — cabeçalhos de segurança aplicados pelo Cloudflare (HTTPS, CSP, anti-clickjacking)
 - `W-Lanches-como-imprimir-a-notinha.pdf` — instruções da impressora para a loja
 
 No ar em: https://wlanches.viniciusdev.workers.dev
@@ -17,3 +19,13 @@ No ar em: https://wlanches.viniciusdev.workers.dev
 5. A equipe abre o endereço da implantação do Apps Script, cola a mensagem recebida, confere a prévia e clica em **Registrar pedido**. Após a confirmação, clique em **Imprimir nota**. No navegador público, `nota.html` oferece apenas impressão.
 
 Cada registro novo começa como **Pendente**. Marque **Pago** ao confirmar o pagamento ou **Cancelado** se o pedido for cancelado. Para conferir a instalação, registre um pedido fictício, cole a mesma mensagem novamente e verifique que aparece apenas uma linha na aba **Pedidos**. Depois confira a impressão no computador da loja.
+
+## Backup da planilha
+
+Na planilha da loja, em **Extensões → Apps Script**, execute `ativarBackup` uma vez. Ele faz uma cópia na hora e, depois, toda segunda-feira às 4h, na pasta **Backups – Pedidos W Lanches** do Drive da loja, guardando as 12 cópias mais recentes. O código do site tem cópia no GitHub.
+
+## Segurança
+
+- O site só tem arquivos estáticos (sem servidor, banco de dados ou bibliotecas externas): não há dependências para atualizar. A fonte é servida pelo próprio site.
+- HTTPS: o Cloudflare serve em HTTPS; quem abrir em `http://` é levado para `https://`, e o cabeçalho HSTS faz o navegador lembrar disso.
+- Firewall: o Cloudflare protege contra ataques de tráfego (DDoS) automaticamente. Regras de WAF configuráveis exigem domínio próprio no Cloudflare.
