@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>W Lanches – Como registrar e imprimir os pedidos</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #1a1815; font-size: 11pt; line-height: 1.45; margin: 0; }
+  header { background: #14120f; color: #fff; padding: 14px 18px; border-radius: 8px; }
+  header h1 { margin: 0; font-size: 20pt; color: #ffc928; letter-spacing: .5px; }
+  header p { margin: 4px 0 0; font-size: 10pt; }
+  h2 { font-size: 13pt; margin: 20px 0 6px; padding-bottom: 4px; border-bottom: 3px solid #ffc928; break-after: avoid; }
+  h3 { font-size: 11pt; margin: 14px 0 4px; break-after: avoid; }
+  p { margin: 6px 0; }
+  ol, ul { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .caixa { background: #f6f3ec; border-left: 4px solid #ffc928; padding: 8px 12px; margin: 10px 0; border-radius: 4px; break-inside: avoid; }
+  .alerta { border-left-color: #e63329; }
+  li { break-inside: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 10pt; }
+  th { background: #14120f; color: #ffc928; text-align: left; padding: 6px 8px; }
+  td { border-bottom: 1px solid #e6e0d4; padding: 6px 8px; vertical-align: top; }
+  tr { break-inside: avoid; }
+  code { background: #f6f3ec; padding: 1px 4px; border-radius: 3px; font-size: 10pt; }
+  .check { font-size: 12pt; }
+</style>
+</head>
+<body>
+<header>
+  <h1>W LANCHES</h1>
+  <p>Como registrar e imprimir os pedidos do site · Impressora Epson TM-T20X · Atualizado em 13/11/2026</p>
+</header>
+
+<h2>Como funciona</h2>
+<p>O cliente faz o pedido no site e ele chega no <b>WhatsApp da loja</b>. No computador da loja, a equipe copia a mensagem e cola na <b>página de pedidos da loja</b>. Essa página mostra a notinha, registra o pedido na planilha da loja (como <b>Pendente</b>) e imprime a nota na Epson.</p>
+<div class="caixa">A <b>página de pedidos</b> é o endereço que a dona criou ao implantar a planilha (começa com <code>https://script.google.com/macros/s/</code>). Ela só abre com o <b>Chrome logado na conta Google da loja</b>. A página do site (<code>wlanches.viniciusdev.workers.dev/nota.html</code>) só imprime e <b>não registra</b> na planilha: use sempre a página de pedidos da loja.</div>
+
+<h2>Parte 1 – Configurar o computador (uma vez só)</h2>
+
+<div class="passo">
+<h3>1. Impressora como padrão (1 min)</h3>
+<ol>
+  <li>Abra <b>Iniciar → Configurações → Bluetooth e dispositivos → Impressoras e scanners</b>.</li>
+  <li>Se embaixo de <b>EPSON TM-T20X Receipt</b> estiver escrito <b>Padrão</b>, pule para o passo 2.</li>
+  <li>Se não estiver, desligue "Permitir que o Windows gerencie minha impressora padrão", clique na Epson e depois em <b>Definir como padrão</b>.</li>
+</ol>
+</div>
+
+<div class="passo">
+<h3>2. Chrome com a conta da loja (2 min)</h3>
+<ol>
+  <li>Abra o <b>Google Chrome</b> e confira, no canto de cima à direita, se a conta conectada é a <b>conta Google da loja</b>. Se não for, entre com ela.</li>
+  <li><b>Aba 1:</b> abra <code>web.whatsapp.com</code> e leia o QR code com o celular da loja (WhatsApp → Aparelhos conectados → Conectar um aparelho).</li>
+  <li><b>Aba 2:</b> abra a <b>página de pedidos da loja</b> e salve nos favoritos com <b>Ctrl+D</b>.</li>
+</ol>
+</div>
+
+<div class="passo">
+<h3>3. Primeira impressão (3 min)</h3>
+<ol>
+  <li>Faça um pedido de teste pelo site, em outro celular, dentro do horário de atendimento, e envie para o WhatsApp da loja.</li>
+  <li>No WhatsApp Web, selecione a mensagem inteira, do "Novo pedido" até o "Pagamento", e aperte <b>Ctrl+C</b>.</li>
+  <li>Na página de pedidos, clique no quadro branco e aperte <b>Ctrl+V</b> (ou clique em <b>Colar pedido</b>).</li>
+  <li>Confira a notinha que aparece e clique em <b>Registrar pedido</b>. Espere aparecer "Pedido registrado como Pendente."</li>
+  <li>Clique em <b>Imprimir nota</b>. Na janela de impressão:
+    <ul>
+      <li><b>Destino</b>: EPSON TM-T20X Receipt;</li>
+      <li><b>Mais definições → Margens</b>: Nenhuma;</li>
+      <li>desmarque <b>Cabeçalhos e rodapés</b>;</li>
+      <li>clique em <b>Imprimir</b>.</li>
+    </ul>
+  </li>
+  <li>Cole a <b>mesma mensagem</b> de novo e clique em Registrar: deve aparecer "Este pedido já está na planilha." e só uma linha na aba Pedidos.</li>
+  <li>Depois do teste, apague a linha do pedido de teste na planilha.</li>
+</ol>
+<p>O Chrome guarda essas escolhas de impressão para as próximas vezes.</p>
+</div>
+
+<div class="passo">
+<h3>4. Imprimir sem abrir a janela (opcional, 3 min)</h3>
+<ol>
+  <li>Na área de trabalho, clique com o botão direito no ícone do <b>Chrome</b> → <b>Propriedades</b>.</li>
+  <li>No campo <b>Destino</b>, vá até o fim do texto, dê um espaço e escreva <code>--kiosk-printing</code>.</li>
+  <li>Clique em <b>OK</b>, feche todas as janelas do Chrome e abra sempre por esse ícone.</li>
+</ol>
+</div>
+
+<h2>Parte 2 – No dia a dia</h2>
+<div class="caixa check">
+  <b>1.</b> Chegou pedido no WhatsApp Web → selecione a mensagem e <b>Ctrl+C</b><br>
+  <b>2.</b> Página de pedidos → <b>Ctrl+V</b> no quadro (ou <b>Colar pedido</b>)<br>
+  <b>3.</b> Confira itens, preços, total e taxa com o cardápio<br>
+  <b>4.</b> Confirme o total com o cliente no WhatsApp<br>
+  <b>5.</b> <b>Registrar pedido</b> → <b>Imprimir nota</b><br>
+  <b>6.</b> Na planilha, mude o status para <b>Pago</b> ao receber, ou <b>Cancelado</b> se o cliente desistir
+</div>
+<div class="caixa alerta">A mensagem passa pelo WhatsApp do cliente e pode ser alterada. Sempre confira os preços e o total antes de aceitar. Taxa de entrega: <b>R$ 4 por km</b>, arredondando o km para cima. Se vier "a combinar", calcule e informe o valor ao cliente.</div>
+
+<h2>Se der problema</h2>
+<table>
+  <tr><th style="width:38%">O que aparece</th><th>O que fazer</th></tr>
+  <tr><td>"Cole a mensagem inteira, do Novo pedido até Pagamento."</td><td>A mensagem foi copiada pela metade. Selecione de novo, do "Novo pedido" até o "Pagamento".</td></tr>
+  <tr><td>"Este pedido já está na planilha."</td><td>Normal: ele já foi registrado antes. Pode imprimir de novo se precisar.</td></tr>
+  <tr><td>"A loja precisa vincular a planilha antes do primeiro registro."</td><td>Na planilha: <b>Extensões → Apps Script</b>, escolha <b>vincularPlanilha</b> e clique em <b>Executar</b>.</td></tr>
+  <tr><td>A página de pedidos pede login ou diz que você não tem permissão</td><td>O Chrome está em outra conta. Entre com a <b>conta Google da loja</b>.</td></tr>
+  <tr><td>O botão <b>Colar pedido</b> não funciona</td><td>Clique no quadro branco e aperte <b>Ctrl+V</b>.</td></tr>
+  <tr><td>A impressora não aparece no Windows</td><td>Confira o cabo USB e se ela está ligada. Se não aparecer, instale o driver da Epson ("TM-T20X Advanced Printer Driver", no site da Epson).</td></tr>
+  <tr><td>A nota sai cortada, pequena, com espaço sobrando ou com a barra do Google</td><td>Tire uma foto da nota impressa e mande para quem cuida do site ajustar.</td></tr>
+  <tr><td>Imprimiu em outra impressora</td><td>Volte à Parte 1, passo 1, e confira o Destino na janela de impressão.</td></tr>
+  <tr><td>A janela de impressão continua aparecendo com o passo 4</td><td>Feche todas as janelas do Chrome e abra pelo ícone que recebeu o <code>--kiosk-printing</code>.</td></tr>
+  <tr><td>O cliente não consegue enviar o pedido</td><td>A loja está fora do horário ou o pedido está abaixo do mínimo de R$ 8,00.</td></tr>
+</table>
+
+<div class="caixa">Não compartilhe a planilha nem o endereço da página de pedidos com ninguém de fora da loja: eles guardam nome e endereço dos clientes.</div>
+</body>
+</html>
