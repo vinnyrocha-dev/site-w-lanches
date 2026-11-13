@@ -22,7 +22,7 @@ Cada registro novo começa como **Pendente**. Marque **Pago** ao confirmar o pag
 
 ## Backup da planilha
 
-Na planilha da loja, em **Extensões → Apps Script**, execute `ativarBackup` uma vez. Ele faz uma cópia na hora e, depois, toda segunda-feira às 4h, na pasta **Backups – Pedidos W Lanches** do Drive da loja, guardando as 12 cópias mais recentes. O código do site tem cópia no GitHub.
+Na planilha da loja, em **Extensões → Apps Script**, execute `ativarBackup` uma vez. Ele faz uma cópia na hora e, depois, toda segunda-feira às 4h, na pasta **Backups – Pedidos W Lanches** do Drive da loja, guardando as 4 cópias mais recentes. Também agenda a limpeza diária (3h) que anonimiza os dados pessoais de pedidos com mais de 90 dias. Rotina da equipe: `rotina-da-loja.md`. O código do site tem cópia no GitHub.
 
 ## Segurança
 

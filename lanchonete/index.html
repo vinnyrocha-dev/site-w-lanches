@@ -452,12 +452,12 @@ function telaSacola() {
         <input id="nome" type="text" required autocomplete="name" maxlength="60">
         <label class="campo">Como quer receber?</label>
         <label class="opcao"><span>Retirar no local<br><small class="dica">${LOJA.endereco}</small></span><input type="radio" name="receber" value="retirada" checked></label>
-        <label class="opcao"><span>Entrega por motoboy</span><input type="radio" name="receber" value="entrega"></label>
+        <label class="opcao"><span>Entrega por motoboy<br><small class="dica">Taxa pela distância, confirmada pela loja no WhatsApp</small></span><input type="radio" name="receber" value="entrega"></label>
         <div id="campoEntrega" hidden>
           <label class="campo" for="endereco">Endereço de entrega</label>
           <input id="endereco" type="text" maxlength="150" autocomplete="street-address" placeholder="Rua, número, bairro, ponto de referência">
           <button type="button" class="btn-sec" id="calcular">📍 Calcular taxa pela minha localização</button>
-          <p class="dica" id="infoTaxa">Toque no botão estando no endereço de entrega.</p>
+          <p class="dica" id="infoTaxa">Toque no botão estando no endereço de entrega. Sua localização vai na mensagem do pedido para o motoboy. Se preferir, só digite o endereço: a taxa é combinada pelo WhatsApp.</p>
         </div>
         <label class="campo" for="pagamento">Forma de pagamento</label>
         <select id="pagamento" required>${LOJA.pagamentos.map(p => `<option>${p}</option>`).join("")}</select>
@@ -468,7 +468,7 @@ function telaSacola() {
       </div>
       <div class="totais" id="totais"></div>
       <div class="bloco"><button class="btn" id="enviar" type="submit">Enviar pedido pelo WhatsApp</button>
-        <p class="aviso-legal">Usamos seu nome e, na entrega, seu endereço só para preparar e entregar o pedido. Ao enviar, você concorda com os <a href="termos.html" target="_blank">Termos de Uso</a> e a <a href="privacidade.html" target="_blank">Política de Privacidade</a>.</p>
+        <p class="aviso-legal">O pedido só vale depois que a loja confirmar no WhatsApp. Você pode cancelar pelo WhatsApp antes do preparo. Usamos seu nome e, na entrega, seu endereço só para preparar e entregar o pedido, e apagamos esses dados em até 90 dias. Dúvidas sobre seus dados: WhatsApp da loja. Ao enviar, você concorda com os <a href="termos.html" target="_blank">Termos de Uso</a> e a <a href="privacidade.html" target="_blank">Política de Privacidade</a>.</p>
         <p id="erro" class="vazio" style="padding:8px 0" hidden></p></div>
     </form>`;
 

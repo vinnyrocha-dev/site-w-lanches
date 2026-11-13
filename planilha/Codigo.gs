@@ -171,15 +171,45 @@ function montarRelatorio(ss) {
   ss.setSpreadsheetLocale(idioma);
 }
 
-// Backup: uma cópia da planilha por semana numa pasta do Drive da loja, guardando as 12 mais recentes.
-// Rode ativarBackup uma vez; ele faz a primeira cópia na hora e agenda as próximas.
+// Rotinas automáticas. Rode ativarBackup uma vez: ele agenda
+// - uma cópia da planilha por semana (segunda, 4h) na pasta do Drive, guardando as 4 mais recentes;
+// - a limpeza diária (3h) que apaga os dados pessoais de pedidos com mais de 90 dias.
+// Os valores e itens continuam na planilha para o relatório de vendas.
 const PASTA_BACKUP = 'Backups – Pedidos W Lanches';
-const COPIAS_GUARDADAS = 12;
+const COPIAS_GUARDADAS = 4; // 4 semanas: um dado pessoal some das cópias até ~4 semanas depois de anonimizado
+const DIAS_GUARDA = 90;
+const ANONIMO = 'Anonimizado';
 
 function ativarBackup() {
-  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'fazerBackup').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.getProjectTriggers().filter(t => ['fazerBackup', 'limparDadosAntigos'].includes(t.getHandlerFunction())).forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('fazerBackup').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(4).create();
+  ScriptApp.newTrigger('limparDadosAntigos').timeBased().everyDays(1).atHour(3).create();
+  limparDadosAntigos();
   fazerBackup();
+}
+
+// Anonimiza pedidos com mais de DIAS_GUARDA dias: tira nome, endereço, observações e troco. Devolve quantos mudou.
+function limparDadosAntigos() {
+  const id = PropertiesService.getScriptProperties().getProperty('PLANILHA_ID') || SpreadsheetApp.getActiveSpreadsheet().getId();
+  const pedidos = SpreadsheetApp.openById(id).getSheetByName('Pedidos');
+  const linhas = pedidos.getLastRow() - 1;
+  if (linhas < 1) return 0;
+  const [ano, mes, d] = Utilities.formatDate(new Date(), FUSO, 'yyyy-M-d').split('-').map(Number);
+  const limite = Date.UTC(ano, mes - 1, d) / 86400000 + 25569 - DIAS_GUARDA;
+  const faixa = pedidos.getRange(2, 1, linhas, 12);
+  const dados = faixa.getValues();
+  let mudou = 0;
+  dados.forEach(r => {
+    const serie = r[0] instanceof Date ? Date.UTC(r[0].getFullYear(), r[0].getMonth(), r[0].getDate()) / 86400000 + 25569 : Number(r[0]);
+    if (!serie || serie >= limite || r[3] === ANONIMO) return;
+    r[3] = ANONIMO;                                                     // Cliente
+    r[5] = r[5] ? ANONIMO : '';                                         // Endereço
+    r[6] = String(r[6]).split('\n').map(l => l.replace(/ – Obs\.: .*$/, '')).join('\n'); // Itens sem observações
+    r[11] = '';                                                         // Troco
+    mudou++;
+  });
+  if (mudou) faixa.setValues(dados);
+  return mudou;
 }
 
 function fazerBackup() {

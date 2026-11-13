@@ -19,7 +19,7 @@ global.Utilities.computeDigest = (_algoritmo, texto) => require('crypto').create
 global.Utilities.base64EncodeWebSafe = bytes => bytes.toString('base64url');
 global.Utilities.DigestAlgorithm = { SHA_256: 'SHA_256' };
 global.Utilities.Charset = { UTF_8: 'UTF_8' };
-eval(fs.readFileSync(path.join(__dirname, 'Codigo.gs'), 'utf8') + '; global.registrarPedido = registrarPedido; global.ativarBackup = ativarBackup; global.fazerBackup = fazerBackup; global.montarRelatorio = montarRelatorio; global.montarPedidos = montarPedidos;');
+eval(fs.readFileSync(path.join(__dirname, 'Codigo.gs'), 'utf8') + '; global.registrarPedido = registrarPedido; global.ativarBackup = ativarBackup; global.fazerBackup = fazerBackup; global.limparDadosAntigos = limparDadosAntigos; global.montarRelatorio = montarRelatorio; global.montarPedidos = montarPedidos;');
 
 const enviar = registrarPedido;
 const pedido = { num: '1234', cliente: 'Maria', pagamento: 'Dinheiro', troco: '100', recebimento: 'Entrega', endereco: 'Rua A, 10', km: 3.4, taxaCombinar: false,
@@ -76,16 +76,35 @@ assert.ok(query.includes("Col6 = 'Pago'") && !query.includes('TEXT('));
     createFolder: () => (pastaCriada++, pasta),
     getFileById: () => ({ makeCopy: () => { const n = ++criadaEm; let lixeira = false; copias.push({ getDateCreated: () => n, isTrashed: () => lixeira, setTrashed: v => { lixeira = v; lixo.push(n); } }); } }),
   };
-  const cadeiaG = { timeBased: () => cadeiaG, onWeekDay: () => cadeiaG, atHour: () => cadeiaG, create: () => gatilhos.push({ getHandlerFunction: () => 'fazerBackup' }) };
-  global.ScriptApp = { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: t => gatilhos.splice(gatilhos.indexOf(t), 1), newTrigger: () => cadeiaG, WeekDay: { MONDAY: 'MONDAY' } };
+  let funcaoG; const cadeiaG = { timeBased: () => cadeiaG, onWeekDay: () => cadeiaG, everyDays: () => cadeiaG, atHour: () => cadeiaG, create: () => { const f = funcaoG; gatilhos.push({ getHandlerFunction: () => f }); } };
+  global.ScriptApp = { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: t => gatilhos.splice(gatilhos.indexOf(t), 1), newTrigger: f => (funcaoG = f, cadeiaG), WeekDay: { MONDAY: 'MONDAY' } };
   global.Utilities.formatDate = () => '2026-11-13';
+  const openByIdOriginal = global.SpreadsheetApp.openById;
+  global.SpreadsheetApp.openById = () => ({ getSheetByName: () => ({ getLastRow: () => 1 }) }); // planilha vazia
   ativarBackup();
-  assert.strictEqual(gatilhos.length, 1);
+  assert.deepStrictEqual(gatilhos.map(g => g.getHandlerFunction()).sort(), ['fazerBackup', 'limparDadosAntigos']);
   assert.deepStrictEqual([pastaCriada, copias.length], [1, 1]);
   for (let i = 0; i < 14; i++) fazerBackup();
   assert.strictEqual(pastaCriada, 1);
-  assert.strictEqual(copias.filter(c => !c.isTrashed()).length, 12);
-  assert.ok(copias.filter(c => !c.isTrashed()).every(c => c.getDateCreated() > 3)); // ficaram as mais novas
+  assert.strictEqual(copias.filter(c => !c.isTrashed()).length, 4);
+  assert.ok(copias.filter(c => !c.isTrashed()).every(c => c.getDateCreated() > 11)); // ficaram as mais novas
+}
+
+// guarda de 90 dias: só pedidos com mais de 90 dias perdem nome, endereço, observações e troco
+{
+  const hoje = 46339; // 13/11/2026
+  const linhas = [
+    [hoje - 91, '10:00', '1', 'Velha', 'Entrega', 'Rua X, 1 (2 km)', '1x Nº 1 – Obs.: sem cebola\n1x Guaravita', 8, 4, 12, 'Dinheiro', '50'],
+    [hoje - 90, '10:00', '2', 'Limite', 'Retirada', '', '1x Nº 2', 9, '', 9, 'Pix', ''],
+    [hoje - 5, '10:00', '3', 'Nova', 'Entrega', 'Rua Y, 2', '1x Nº 3 – Obs.: bem passado', 11, 4, 15, 'Dinheiro', '20'],
+  ];
+  let gravado = null;
+  global.Utilities.formatDate = () => '2026-11-13';
+  global.SpreadsheetApp.openById = () => ({ getSheetByName: () => ({ getLastRow: () => linhas.length + 1, getRange: () => ({ getValues: () => linhas.map(r => r.slice()), setValues: v => (gravado = v) }) }) });
+  assert.strictEqual(limparDadosAntigos(), 1);
+  assert.deepStrictEqual([gravado[0][3], gravado[0][5], gravado[0][6], gravado[0][11], gravado[0][9]], ['Anonimizado', 'Anonimizado', '1x Nº 1\n1x Guaravita', '', 12]);
+  assert.deepStrictEqual(gravado[1], linhas[1]);
+  assert.deepStrictEqual(gravado[2], linhas[2]);
 }
 
 console.log('todos os testes passaram\n' + query);
