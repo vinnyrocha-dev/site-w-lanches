@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
 <title>Imprimir pedido – W Lanches</title>
 <style>
@@ -36,13 +37,17 @@
 <div class="colar" id="colar">
   <h1>Imprimir pedido – W Lanches</h1>
   <p>No WhatsApp, selecione a mensagem do pedido inteira e aperte <b>Ctrl+C</b>. Depois clique no botão:</p>
-  <button id="btnColar">📋 Colar pedido e imprimir</button>
+  <button id="btnColar">📋 Colar pedido</button>
   <p>Ou cole aqui com <b>Ctrl+V</b>:</p>
   <textarea id="texto" rows="5" placeholder="Cole a mensagem do pedido aqui"></textarea>
   <p id="aviso" class="aviso-erro" hidden></p>
 </div>
 <div id="nota"></div>
-<div class="acoes" id="acoes" hidden><button onclick="print()">🖨️ Imprimir de novo</button></div>
+<div class="acoes" id="acoes" hidden>
+  <button id="registrar" type="button" hidden>Registrar pedido</button>
+  <button id="imprimir" type="button">Imprimir nota</button>
+  <p id="registro" role="status"></p>
+</div>
 
 <script>
 const real = v => Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -76,6 +81,7 @@ function lerTexto(txt) {
     else if ((m = l.match(/^Nome: (.+)$/))) p.c = m[1];
     else if ((m = l.match(/Entrega em: (.+)$/))) p.e = m[1];
     else if ((m = l.match(/^Pagamento: (.+)$/))) { const t = m[1].match(/^(.+?) \(troco para R\$ ([^)]+)\)$/); p.p = t ? t[1] : m[1]; p.t = t ? t[2] : ""; }
+    else if (/^Localização: https:\/\/maps\.google\.com\//.test(l)) continue;
     else if (item && (m = l.match(/^Obs\.: (.+)$/))) item[4] = m[1];
     else if (item) item[3] = item[3] ? `${item[3]} · ${l}` : l;
   }
@@ -108,23 +114,83 @@ function desenhar(p) {
     <div class="linha"></div>
     <div class="centro">Obrigado pela preferência!</div>`;
   document.getElementById("acoes").hidden = false;
-  setTimeout(print, 300); // espera a nota aparecer antes de abrir a impressão
+
 }
 
 const aviso = document.getElementById("aviso");
+const texto = document.getElementById("texto");
+const registrar = document.getElementById("registrar");
+const registro = document.getElementById("registro");
+const imprimir = document.getElementById("imprimir");
+const dentroDaPlanilha = !!window.google?.script?.run;
+let pedidoAtual = null;
+let salvando = false;
+
 function processar(txt) {
+  if (salvando) return;
   const p = lerTexto(txt);
-  aviso.hidden = !!p;
-  if (!p) return (aviso.textContent = "Não reconheci um pedido do site nesse texto. Copie a mensagem inteira, do \"Novo pedido\" até o \"Pagamento\".");
+  pedidoAtual = p;
+  aviso.hidden = !!p || !txt.trim();
+  aviso.textContent = "Cole a mensagem inteira, do “Novo pedido” até “Pagamento”.";
+  registro.textContent = "";
+  registrar.disabled = false;
+  if (!p) {
+    alvo.replaceChildren();
+    document.getElementById("acoes").hidden = true;
+    return;
+  }
+  registrar.hidden = !dentroDaPlanilha;
+  imprimir.disabled = dentroDaPlanilha;
   desenhar(p);
 }
-document.getElementById("btnColar").onclick = async () => {
-  try { processar(await navigator.clipboard.readText()); }
-  catch { aviso.hidden = false; aviso.textContent = "O navegador não deixou ler a área de transferência. Cole com Ctrl+V no quadro abaixo."; }
-};
-document.getElementById("texto").addEventListener("paste", e => processar(e.clipboardData.getData("text")));
 
-const doLink = location.hash.length > 1 && lerLink();
+const colar = document.getElementById("btnColar");
+colar.onclick = async () => {
+  try {
+    const mensagem = await navigator.clipboard.readText();
+    if (salvando) return;
+    texto.value = mensagem;
+    processar(mensagem);
+  } catch {
+    aviso.hidden = false;
+    aviso.textContent = "Cole a mensagem no quadro abaixo com Ctrl+V.";
+    texto.focus();
+  }
+};
+texto.addEventListener("input", () => processar(texto.value));
+imprimir.onclick = () => print();
+
+registrar.onclick = () => {
+  if (!pedidoAtual || salvando) return;
+  const p = pedidoAtual;
+  const dados = {
+    num: p.n || "", cliente: p.c, pagamento: p.p, troco: p.t,
+    recebimento: p.e == null ? "Retirada" : "Entrega", endereco: p.e || "",
+    km: p.km ? Number(p.km.replace(/\s*km$/i, "").replace(",", ".")) : "",
+    taxaCombinar: p.e != null && p.tx == null,
+    itens: p.i.map(([qtd, detalhe, valor, extras, obs]) => ({
+      item: detalhe.split(/ \(Sanduíche\)| \(Trio(?:[ –)]|$)| \+ /)[0],
+      detalhe, qtd, valor, extras, obs,
+    })),
+    subtotal: p.sub ?? p.tot, taxa: p.tx ?? 0, total: p.tot,
+  };
+  salvando = registrar.disabled = colar.disabled = texto.disabled = true;
+  registro.textContent = "Registrando na planilha…";
+  window.google.script.run
+    .withSuccessHandler(resultado => {
+      registro.textContent = resultado === "existente"
+        ? "Este pedido já está na planilha."
+        : "Pedido registrado como Pendente.";
+      salvando = colar.disabled = texto.disabled = imprimir.disabled = false;
+    })
+    .withFailureHandler(erro => {
+      registro.textContent = erro.message || "Não foi possível registrar. Tente novamente.";
+      salvando = registrar.disabled = colar.disabled = texto.disabled = false;
+    })
+    .registrarPedido(dados);
+};
+
+const doLink = !dentroDaPlanilha && location.hash.length > 1 && lerLink();
 if (doLink) desenhar(doLink);
 
 // Autoteste do leitor com uma mensagem no formato do site

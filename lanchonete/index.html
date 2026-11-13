@@ -132,7 +132,6 @@
 const LOJA = {
   nome: "W Lanches",
   whatsapp: "5521992465470",           // 55 + DDD + número, só dígitos
-  planilha: "",                        // endereço do app da planilha (Apps Script); vazio = não salva pedidos
   endereco: "Av. Bob Kennedy, Lote 12, Quadra 16, Loja A – Nova Piam, Belford Roxo – RJ, 26115-560",
   pedidoMinimo: 8,
   telefone: "(21) 99246-5470",
@@ -331,7 +330,7 @@ function telaInicio() {
       </h2>
     </div>
     ${statusHTML()}
-    <div class="linha-info"><span>Pedido mín. ${real(LOJA.pedidoMinimo)} · Entrega ${real(LOJA.taxaKm)}/km</span><a href="#/perfil">Perfil da loja</a></div>
+    <div class="linha-info"><span>Pedido mín. ${real(LOJA.pedidoMinimo)}</span><a href="#/perfil">Perfil da loja</a></div>
     <input class="busca" id="busca" type="search" placeholder="🔍 Buscar lanche (ex.: bacon, frango, 7)" aria-label="Buscar lanche">
     <div id="lista"></div>`;
   const lista = document.getElementById("lista");
@@ -444,7 +443,7 @@ function telaSacola() {
         <input id="nome" type="text" required autocomplete="name" maxlength="60">
         <label class="campo">Como quer receber?</label>
         <label class="opcao"><span>Retirar no local<br><small class="dica">${LOJA.endereco}</small></span><input type="radio" name="receber" value="retirada" checked></label>
-        <label class="opcao"><span>Entrega por motoboy<br><small class="dica">${real(LOJA.taxaKm)} por km</small></span><input type="radio" name="receber" value="entrega"></label>
+        <label class="opcao"><span>Entrega por motoboy</span><input type="radio" name="receber" value="entrega"></label>
         <div id="campoEntrega" hidden>
           <label class="campo" for="endereco">Endereço de entrega</label>
           <input id="endereco" type="text" maxlength="150" autocomplete="street-address" placeholder="Rua, número, bairro, ponto de referência">
@@ -512,10 +511,9 @@ function telaSacola() {
       entrega: entrega() ? { ...ent, endereco: form.endereco.value.trim() } : null,
     };
     const msg = montarMensagem(pedido);
-    salvarNaPlanilha(pedido);
     window.open(`https://wa.me/${LOJA.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
     sacola = []; salvar();
-    app.innerHTML = `${barra("Pedido enviado")}<div class="vazio"><p>✅ Seu pedido foi aberto no WhatsApp.<br>É só tocar em <b>enviar</b> lá na conversa!</p><br><a class="btn" href="#/">Voltar ao cardápio</a></div>`;
+    app.innerHTML = `${barra("Confirme no WhatsApp")}<div class="vazio"><p>✅ Seu pedido foi aberto no WhatsApp.<br>É só tocar em <b>enviar</b> lá na conversa!</p><br><a class="btn" href="#/">Voltar ao cardápio</a></div>`;
   };
   atualizar();
 }
@@ -534,21 +532,6 @@ async function distanciaKm(lat, lon) {
   const rad = x => x * Math.PI / 180;
   const a = Math.sin(rad(lat - LOJA.lat) / 2) ** 2 + Math.cos(rad(LOJA.lat)) * Math.cos(rad(lat)) * Math.sin(rad(lon - LOJA.lon) / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.sqrt(a)) * 1.3;
-}
-
-// Grava o pedido na planilha da loja (planilha/Codigo.gs). Falha em silêncio: o WhatsApp é o que importa.
-function salvarNaPlanilha({ num, nome, pagamento, troco, entrega = null }) {
-  if (!LOJA.planilha) return;
-  const taxa = entrega?.taxa || 0;
-  const dados = {
-    num, cliente: nome, pagamento, troco: pagamento === "Dinheiro" ? troco : "",
-    recebimento: entrega ? "Entrega" : "Retirada", endereco: entrega?.endereco || "",
-    km: entrega?.km ? +entrega.km.toFixed(1) : "", taxaCombinar: !!entrega && !entrega.taxa,
-    itens: sacola.map(i => ({ item: ITENS[i.n].titulo, detalhe: nomeItem(i), extras: i.extras || "", obs: i.obs || "", qtd: i.qtd, valor: precoItem(i) })),
-    subtotal: subtotal(), taxa, total: subtotal() + taxa,
-  };
-  // text/plain + no-cors: o Apps Script aceita sem pedir permissão de CORS; keepalive termina o envio mesmo abrindo o WhatsApp
-  fetch(LOJA.planilha, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain" }, body: JSON.stringify(dados) }).catch(() => {});
 }
 
 function montarMensagem({ num, nome, pagamento, troco, entrega = null }) {
@@ -577,7 +560,7 @@ function telaPerfil() {
     <div class="titulo-sec">Formas de pagamento</div>
     <div class="lista-info">${LOJA.pagamentos.map(p => `<div><span>${p}</span></div>`).join("")}</div>
     <div class="titulo-sec">Pedidos pelo site</div>
-    <div class="lista-info"><div><span>Retirada no local</span><span>✔</span></div><div><span>Entrega por motoboy</span><span>${real(LOJA.taxaKm)} por km</span></div><div><span>Pedido mínimo</span><span>${real(LOJA.pedidoMinimo)}</span></div></div>
+    <div class="lista-info"><div><span>Retirada no local</span><span>✔</span></div><div><span>Entrega por motoboy</span><span>✔</span></div><div><span>Pedido mínimo</span><span>${real(LOJA.pedidoMinimo)}</span></div></div>
     <div class="titulo-sec">Contato</div>
     <div class="lista-info"><div><span>Telefone / WhatsApp</span><a href="https://wa.me/${LOJA.whatsapp}" target="_blank" rel="noopener">${LOJA.telefone}</a></div><div><span>Instagram</span><a href="https://instagram.com/${LOJA.instagram}" target="_blank" rel="noopener">@${LOJA.instagram}</a></div></div>
     <div class="titulo-sec">Endereço</div>

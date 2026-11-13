@@ -1,10 +1,9 @@
 // Planilha de pedidos da W Lanches.
-// Recebe cada pedido enviado pelo site (função salvarNaPlanilha em lanchonete/index.html)
+// Registra pedidos que a equipe conferiu na tela da notinha
 // e grava nas abas "Pedidos" e "Itens" com status Pendente. A loja troca o status para Pago ou Cancelado
 // na lista da coluna Status; a aba "Relatório" soma só os pedidos Pagos.
 //
-// Instalação: cole este arquivo em Extensões → Apps Script da planilha, rode "configurar" uma vez
-// e implante como App da Web (Executar como: eu; Quem pode acessar: qualquer pessoa).
+// Instalação e acesso privado: veja o README do projeto.
 
 const FUSO = 'America/Sao_Paulo';
 const PEDIDOS = ['Data', 'Hora', 'Nº pedido', 'Cliente', 'Recebimento', 'Endereço', 'Itens', 'Subtotal', 'Entrega', 'Total', 'Pagamento', 'Troco', 'Status', 'ID'];
@@ -19,7 +18,8 @@ function configurar() {
   montarItens(ss);
   montarRelatorio(ss);
   const sobra = ss.getSheetByName('Página1') || ss.getSheetByName('Sheet1');
-  if (sobra) ss.deleteSheet(sobra);
+  if (sobra && sobra.getLastRow() === 0) ss.deleteSheet(sobra);
+  vincularPlanilha();
 }
 
 const COR = { preto: '#14120f', amarelo: '#ffc928', creme: '#f6f3ec', linha: '#e6e0d4', texto: '#1a1815', suave: '#6b655b', branco: '#ffffff' };
@@ -171,38 +171,75 @@ function montarRelatorio(ss) {
   ss.setSpreadsheetLocale(idioma);
 }
 
-// O site envia um texto JSON. Tudo que vem de fora é limitado em tamanho e tipo antes de entrar na planilha.
-function doPost(e) {
+function vincularPlanilha() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss.getSheetByName('Pedidos') || !ss.getSheetByName('Itens')) {
+    throw new Error('Execute configurar antes de vincular a planilha.');
+  }
+  PropertiesService.getScriptProperties().setProperty('PLANILHA_ID', ss.getId());
+}
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('nota').setTitle('Pedidos – W Lanches');
+}
+
+function registrarPedido(dados) {
+  const p = lerPedido_(dados);
+  if (!/^\d{4}$/.test(p.num) || !p.cliente.trim() || !['Pix', 'Cartão', 'Dinheiro'].includes(p.pagamento)) {
+    throw new Error('Confira o número, o nome e a forma de pagamento do pedido.');
+  }
+  if (p.recebimento === 'Entrega' && !p.endereco.trim()) {
+    throw new Error('O pedido de entrega precisa de endereço.');
+  }
+
+  const planilhaId = PropertiesService.getScriptProperties().getProperty('PLANILHA_ID');
+  if (!planilhaId) throw new Error('A loja precisa vincular a planilha antes do primeiro registro.');
+  const ss = SpreadsheetApp.openById(planilhaId);
+  const pedidos = ss.getSheetByName('Pedidos');
+  const itens = ss.getSheetByName('Itens');
+  if (!pedidos || !itens) throw new Error('As abas Pedidos e Itens precisam estar disponíveis.');
+
+  const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(p), Utilities.Charset.UTF_8);
+  const id = 'wa-' + Utilities.base64EncodeWebSafe(hash).replace(/=+$/, '');
   const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
   try {
-    lock.waitLock(30000);
-    const p = lerPedido(JSON.parse(e.postData.contents));
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (temId_(pedidos, 14, id)) return 'existente';
     const agora = new Date();
     // Número de série da data, sem hora: um objeto Date mudaria de dia conforme o fuso do script e não bateria com HOJE()
     const [ano, mes, d] = Utilities.formatDate(agora, FUSO, 'yyyy-M-d').split('-').map(Number);
     const dia = Date.UTC(ano, mes - 1, d) / 86400000 + 25569;
     const hora = Utilities.formatDate(agora, FUSO, 'HH:mm');
-    const id = String(agora.getTime()) + '-' + p.num;
 
     const resumo = p.itens.map(i => i.qtd + 'x ' + i.detalhe + (i.extras ? ' (' + i.extras + ')' : '') + (i.obs ? ' – Obs.: ' + i.obs : '')).join('\n');
     const entrega = p.recebimento === 'Entrega' ? (p.taxaCombinar ? 'a combinar' : p.taxa) : '';
     const endereco = p.recebimento === 'Entrega' ? p.endereco + (p.km !== '' ? ' (' + String(p.km).replace('.', ',') + ' km)' : '') : '';
-    ss.getSheetByName('Pedidos').appendRow([dia, hora, p.num, p.cliente, p.recebimento, endereco, resumo,
-      p.subtotal, entrega, p.total, p.pagamento, p.troco, 'Pendente', id]);
+    // Grave os itens em lote antes do pedido. Em uma nova tentativa, reaproveite o lote já salvo.
+    if (!temId_(itens, 6, id)) {
+      const primeira = itens.getLastRow() + 1;
+      const faltam = primeira + p.itens.length - 1 - itens.getMaxRows();
+      if (faltam > 0) itens.insertRowsAfter(itens.getMaxRows(), faltam);
+      itens.getRange(primeira, 1, p.itens.length, 6)
+        .setValues(p.itens.map(i => [dia, p.num, i.item, i.qtd, i.valor, id]));
+      SpreadsheetApp.flush();
+    }
 
-    const abaItens = ss.getSheetByName('Itens');
-    p.itens.forEach(i => abaItens.appendRow([dia, p.num, i.item, i.qtd, i.valor, id])); // appendRow cria linha nova quando a aba enche
-    return ContentService.createTextOutput('ok');
-  } catch (err) {
-    return ContentService.createTextOutput('erro: ' + err.message);
+    pedidos.appendRow([dia, hora, p.num, p.cliente, p.recebimento, endereco, resumo,
+      p.subtotal, entrega, p.total, p.pagamento, p.troco, 'Pendente', id]);
+    SpreadsheetApp.flush();
+    return 'ok';
   } finally {
     lock.releaseLock();
   }
 }
 
-function lerPedido(d) {
-  const texto = (v, max) => String(v == null ? '' : v).replace(/^[=+\-@]+/, '').slice(0, max); // tira "=" do começo: ninguém injeta fórmula
+function temId_(aba, coluna, id) {
+  const linhas = aba.getLastRow() - 1;
+  return linhas > 0 && !!aba.getRange(2, coluna, linhas, 1).createTextFinder(id).matchEntireCell(true).findNext();
+}
+
+function lerPedido_(d) {
+  const texto = (v, max) => String(v == null ? '' : v).replace(/^\s*[=+\-@]+/, '').slice(0, max); // tira "=" do começo: ninguém injeta fórmula
   const numero = v => { const n = Number(v); if (!isFinite(n) || n < 0 || n > 100000) throw new Error('valor inválido'); return Math.round(n * 100) / 100; };
   if (!d || !Array.isArray(d.itens) || !d.itens.length || d.itens.length > 200) throw new Error('pedido sem itens');
   return {
